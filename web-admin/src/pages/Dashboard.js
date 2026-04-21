@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
-
-const SERVER = 'https://unsaved-placard-capacity.ngrok-free.dev';
+const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
 const SEV_CONFIG = {
   high:   { bg: '#ff3b3b22', border: '#ff3b3b', text: '#ff6b6b', dot: '#ff3b3b', label: 'HIGH' },
@@ -138,7 +137,7 @@ const STEP_COLORS = {
   RESOLVED:   '#30d158',
 };
 
-const NGROK_HEADER = { 'ngrok-skip-browser-warning': 'true' };
+const NGROK_HEADER = {};
 
 function StatusPipeline({ currentStatus, alertId, onStatusChange }) {
   const currentIdx = STATUS_PIPELINE.indexOf(currentStatus);
