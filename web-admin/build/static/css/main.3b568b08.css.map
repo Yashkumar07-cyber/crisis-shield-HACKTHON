@@ -1,0 +1,1 @@
+{"version":3,"file":"static/css/main.3b568b08.css","mappings":"AAAA,EAA2B,qBAAsB,CAA7C,QAAS,CAAE,SAAoC,CACnD,KAAgC,kBAAmB,CAAE,aAAc,CAA5D,sBAAuB,CAAuC,gBAAmB","sources":["App.css"],"sourcesContent":["* { margin: 0; padding: 0; box-sizing: border-box; }\r\nbody { font-family: sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }"],"names":[],"sourceRoot":""}
