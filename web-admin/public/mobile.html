@@ -333,7 +333,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 </div>
 
 <script>
-// ✅ FIXED: Render backend URL
 const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
 let coords = null, severity = 'medium', services = [], photoB64 = null, alertId = null, watchId = null;
@@ -345,36 +344,41 @@ function getLocation() {
   const txt = document.getElementById('gps-txt');
   dot.className = 'gps-dot on';
   txt.textContent = 'Getting location...';
-  if (!navigator.geolocation) { txt.textContent = 'GPS not supported'; return; }
+
+  if (!navigator.geolocation) {
+    txt.textContent = 'GPS not supported';
+    return;
+  }
+
   navigator.geolocation.getCurrentPosition(
     pos => {
       coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       dot.style.background = 'var(--green)';
-      txt.innerHTML = `<b style="color:var(--green)">Got it!</b> &nbsp;${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
-      const s = document.getElementById('gps-strip');
-      s.style.background = 'var(--green-dim)';
-      s.style.borderColor = '#30d15830';
-      s.style.color = 'var(--green)';
+      txt.innerHTML = `<b style="color:var(--green)">Got it!</b> ${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
     },
     () => {
-      dot.style.background = 'var(--red)'; dot.className = 'gps-dot';
+      dot.style.background = 'var(--red)';
       txt.textContent = 'Location denied — tap to retry';
     },
     { enableHighAccuracy: true, timeout: 12000 }
   );
 }
 
-function triggerCam(e) { if (e) e.stopPropagation(); document.getElementById('photo-input').click(); }
+function triggerCam(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('photo-input').click();
+}
 
 function handlePhoto(input) {
-  const file = input.files[0]; if (!file) return;
+  const file = input.files[0];
+  if (!file) return;
+
   const reader = new FileReader();
   reader.onload = ev => {
     photoB64 = ev.target.result;
     document.getElementById('photo-preview').src = photoB64;
     document.getElementById('photo-preview').style.display = 'block';
     document.getElementById('cam-ph').style.display = 'none';
-    document.getElementById('retake-btn').style.display = 'block';
   };
   reader.readAsDataURL(file);
 }
@@ -387,54 +391,15 @@ function setSev(val, el) {
 
 function toggleSvc(el, name) {
   el.classList.toggle('on');
-  if (services.includes(name)) services = services.filter(s => s !== name);
-  else services.push(name);
+  if (services.includes(name)) {
+    services = services.filter(s => s !== name);
+  } else {
+    services.push(name);
+  }
 }
 
-function getMapLink() { return coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null; }
-
-function shareWA() {
-  const link = getMapLink();
-  if (!link) { showToast('Location nahi mili abhi', true); return; }
-  window.open(`https://wa.me/?text=${encodeURIComponent('🚨 EMERGENCY! Mera location: ' + link + '\nCrisisShield se report kiya.')}`, '_blank');
-}
-
-function shareSMS() {
-  const link = getMapLink();
-  if (!link) { showToast('Location nahi mili abhi', true); return; }
-  window.open(`sms:?body=${encodeURIComponent('🚨 Emergency! Location: ' + link)}`, '_blank');
-}
-
-function copyLoc() {
-  const link = getMapLink();
-  if (!link) { showToast('Location nahi mili abhi', true); return; }
-  navigator.clipboard.writeText(link)
-    .then(() => showToast('Location link copied!'))
-    .catch(() => {
-      const el = document.createElement('textarea');
-      el.value = link; document.body.appendChild(el); el.select();
-      document.execCommand('copy'); document.body.removeChild(el);
-      showToast('Location link copied!');
-    });
-}
-
-function startTracking(id) {
-  if (!navigator.geolocation) return;
-  document.getElementById('track-row').style.display = 'flex';
-  watchId = navigator.geolocation.watchPosition(
-    pos => {
-      const lat = pos.coords.latitude, lng = pos.coords.longitude;
-      coords = { lat, lng };
-      document.getElementById('map-btn').href = `https://maps.google.com/?q=${lat},${lng}`;
-      fetch(`${SERVER}/api/alerts/${id}/location`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat, lng })
-      }).catch(() => {});
-    },
-    () => {},
-    { enableHighAccuracy: true, distanceFilter: 15 }
-  );
+function getMapLink() {
+  return coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
 }
 
 async function submitReport() {
@@ -443,16 +408,18 @@ async function submitReport() {
   const name  = document.getElementById('name').value.trim();
   const phone = document.getElementById('phone').value.trim();
 
-  if (!title)           { showToast('Incident title likhna zaroori hai!', true); return; }
-  if (!name)            { showToast('Apna naam likhna zaroori hai!', true); return; }
-  if (!coords)          { showToast('Pehle location lo!', true); return; }
-  if (services.length === 0) { showToast('Kam se kam ek service select karo!', true); return; }
+  if (!title) return showToast('Title required', true);
+  if (!name) return showToast('Name required', true);
+  if (!coords) return showToast('Get location first', true);
+  if (services.length === 0) return showToast('Select at least one service', true);
 
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
-  document.getElementById('btn-content').innerHTML = '<div class="spinner"></div>';
+  document.getElementById('btn-content').innerHTML = 'Sending...';
 
   try {
+    console.log("📡 Sending request to server...");
+
     const res = await fetch(`${SERVER}/api/alerts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -468,52 +435,41 @@ async function submitReport() {
       })
     });
 
+    console.log("📥 Response status:", res.status);
+
     const data = await res.json();
-    if (!data.success) throw new Error(data.error || 'Server error');
+    console.log("📦 Response data:", data);
+
+    // ✅ FIX: correct check
+    if (!res.ok) {
+      throw new Error(data.error || "Server error");
+    }
 
     alertId = data.alert._id;
-    startTracking(alertId);
+    showToast("✅ Report submitted successfully");
+
     showSuccess();
+
   } catch (err) {
-    showToast('Server se connect nahi hua — server chal raha hai?', true);
+    console.error("❌ ERROR:", err);
+    showToast('Server se connect nahi hua', true);
+
     btn.disabled = false;
-    document.getElementById('btn-content').innerHTML = '🚨 &nbsp;Report Emergency';
+    document.getElementById('btn-content').innerHTML = '🚨 Report Emergency';
   }
 }
 
 function showSuccess() {
-  if (photoB64) { const p = document.getElementById('suc-photo'); p.src = photoB64; p.style.display = 'block'; }
-  if (services.length > 0) document.getElementById('svc-txt').textContent = services.join(', ') + ' notified';
-  if (coords) document.getElementById('map-btn').href = getMapLink();
   document.getElementById('page-form').classList.remove('active');
   document.getElementById('page-success').classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function resetForm() {
-  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  ['title', 'desc', 'name', 'phone'].forEach(id => document.getElementById(id).value = '');
-  photoB64 = null; alertId = null; services = []; severity = 'medium';
-  document.getElementById('photo-preview').style.display = 'none';
-  document.getElementById('cam-ph').style.display = 'block';
-  document.getElementById('retake-btn').style.display = 'none';
-  document.querySelectorAll('.svc-btn').forEach(b => b.classList.remove('on'));
-  document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
-  document.querySelector('.sev-btn.medium').classList.add('on');
-  document.getElementById('submit-btn').disabled = false;
-  document.getElementById('btn-content').innerHTML = '🚨 &nbsp;Report Emergency';
-  document.getElementById('page-success').classList.remove('active');
-  document.getElementById('page-form').classList.add('active');
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-  getLocation();
 }
 
 function showToast(msg, isErr) {
-  document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
   t.className = 'toast' + (isErr ? ' err' : '');
-  t.textContent = msg; document.body.appendChild(t);
-  setTimeout(() => t.remove(), 3500);
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3000);
 }
 </script>
 </body>
