@@ -333,8 +333,8 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 </div>
 
 <script>
-// ✅ FIXED: correct server URL and port
-const SERVER = 'https://unsaved-placard-capacity.ngrok-free.dev';
+// ✅ FIXED: Render backend URL
+const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
 let coords = null, severity = 'medium', services = [], photoB64 = null, alertId = null, watchId = null;
 
@@ -426,7 +426,6 @@ function startTracking(id) {
       const lat = pos.coords.latitude, lng = pos.coords.longitude;
       coords = { lat, lng };
       document.getElementById('map-btn').href = `https://maps.google.com/?q=${lat},${lng}`;
-      // ✅ FIXED: correct endpoint /api/alerts/:id/location
       fetch(`${SERVER}/api/alerts/${id}/location`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -454,12 +453,11 @@ async function submitReport() {
   document.getElementById('btn-content').innerHTML = '<div class="spinner"></div>';
 
   try {
-    // ✅ FIXED: correct endpoint /api/alerts
     const res = await fetch(`${SERVER}/api/alerts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name,           // ✅ backend expects 'name'
+        name,
         phone,
         title,
         description: desc,
@@ -473,7 +471,6 @@ async function submitReport() {
     const data = await res.json();
     if (!data.success) throw new Error(data.error || 'Server error');
 
-    // ✅ FIXED: data.alert._id not data.incident._id
     alertId = data.alert._id;
     startTracking(alertId);
     showSuccess();
