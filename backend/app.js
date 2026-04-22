@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const alertRoutes = require('./routes/alertRoutes');
+const aiRoutes = require('./routes/ai');
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.get('/health', (req, res) => {
 });
 
 app.use('/api/alerts', alertRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.use((err, req, res, next) => {
   console.error(err.stack);

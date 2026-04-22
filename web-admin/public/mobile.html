@@ -24,7 +24,6 @@ body::before{
 }
 .app{position:relative;z-index:1;max-width:430px;margin:0 auto;min-height:100vh;}
 
-/* HEADER */
 .header{
   background:rgba(6,9,16,.96);backdrop-filter:blur(16px);
   border-bottom:1px solid var(--red-b);
@@ -39,15 +38,12 @@ body::before{
 .pulse{width:6px;height:6px;background:var(--red);border-radius:50%;animation:pulse 1.4s infinite;}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.3;transform:scale(.6);}}
 
-/* PAGES */
 .page{display:none;padding:16px 14px 48px;animation:fadeUp .35s ease both;}
 .page.active{display:block;}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 
-/* CARD */
 .card{background:var(--bg2);border:1px solid var(--border);border-radius:16px;padding:18px;margin-bottom:12px;}
 
-/* SECTION LABEL */
 .slabel{
   font-size:10px;font-weight:700;letter-spacing:3px;color:var(--red);
   text-transform:uppercase;margin-bottom:14px;
@@ -56,7 +52,6 @@ body::before{
 }
 .slabel::after{content:'';flex:1;height:1px;background:var(--border);}
 
-/* GPS */
 .gps-strip{
   display:flex;align-items:center;gap:10px;
   background:var(--blue-dim);border:1px solid #0a84ff25;
@@ -67,72 +62,74 @@ body::before{
 .gps-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
 .gps-dot.on{animation:pulse 1.4s infinite;}
 
-/* AI BOX */
+/* ── AI BOX ── */
 .ai-box{
   display:none;
-  background:#0a84ff08;
-  border:1px solid #0a84ff30;
-  border-radius:14px;
-  padding:14px 16px;
+  background:linear-gradient(135deg,#0a84ff08,#0a84ff12);
+  border:1.5px solid #0a84ff35;
+  border-radius:16px;
+  padding:16px;
   margin-bottom:12px;
   animation:fadeUp .3s ease both;
+  position:relative;overflow:hidden;
 }
-.ai-box-header{
-  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+.ai-box::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:2px;
+  background:linear-gradient(90deg,var(--blue),#60a5fa,var(--blue));
+  background-size:200% 100%;animation:shimmer 2s linear infinite;
 }
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+
+.ai-box-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
 .ai-icon{
-  width:24px;height:24px;background:var(--blue);border-radius:7px;
-  display:flex;align-items:center;justify-content:center;
-  font-size:12px;flex-shrink:0;
+  width:28px;height:28px;background:linear-gradient(135deg,#0a84ff,#60a5fa);border-radius:9px;
+  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;
+  box-shadow:0 2px 8px rgba(10,132,255,0.4);
 }
-.ai-label{
-  font-size:9px;font-weight:700;letter-spacing:2.5px;
-  color:var(--blue);font-family:'JetBrains Mono',monospace;
-  text-transform:uppercase;flex:1;
-}
-.ai-spinner{
-  width:14px;height:14px;
-  border:2px solid #0a84ff30;border-top-color:var(--blue);
-  border-radius:50%;animation:spin .7s linear infinite;
-}
-@keyframes spin{to{transform:rotate(360deg);}}
-.ai-summary{
-  font-size:11.5px;color:#60a5fa;
+.ai-label{font-size:10px;font-weight:700;letter-spacing:2.5px;color:var(--blue);font-family:'JetBrains Mono',monospace;text-transform:uppercase;flex:1;}
+.ai-status-pill{
+  font-size:9px;font-weight:700;letter-spacing:1px;
   font-family:'JetBrains Mono',monospace;
-  margin-bottom:10px;line-height:1.5;
-  display:none;
+  padding:3px 10px;border-radius:20px;
+  background:#0a84ff20;border:1px solid #0a84ff40;color:var(--blue);
 }
-.ai-svc-label{
-  font-size:9px;font-weight:700;letter-spacing:1.5px;
-  color:var(--muted);font-family:'JetBrains Mono',monospace;
-  margin-bottom:7px;display:none;
-}
-.ai-chips{
-  display:flex;gap:6px;flex-wrap:wrap;
-  margin-bottom:12px;
-}
-.ai-chip{
-  background:#0a84ff20;border:1px solid #0a84ff40;
-  color:var(--blue);padding:4px 11px;border-radius:20px;
-  font-size:9px;font-weight:700;
-  font-family:'JetBrains Mono',monospace;
-  letter-spacing:.5px;
-}
+.ai-status-pill.thinking{background:#ff9f0a15;border-color:#ff9f0a40;color:var(--amber);animation:blink 1s ease-in-out infinite;}
+.ai-status-pill.done{background:#30d15815;border-color:#30d15840;color:var(--green);}
+.ai-status-pill.err{background:var(--red-dim);border-color:var(--red-b);color:var(--red);}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.5}}
+
+.ai-thinking{display:flex;align-items:center;gap:6px;padding:10px 0;margin-bottom:8px;}
+.ai-thinking-dot{width:6px;height:6px;border-radius:50%;background:var(--blue);opacity:.3;animation:dotPulse 1.2s ease-in-out infinite;}
+.ai-thinking-dot:nth-child(2){animation-delay:.2s;}
+.ai-thinking-dot:nth-child(3){animation-delay:.4s;}
+@keyframes dotPulse{0%,100%{opacity:.3;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
+
+.ai-result{display:none;}
+.ai-summary-box{background:#0a84ff10;border:1px solid #0a84ff25;border-radius:10px;padding:10px 13px;margin-bottom:12px;}
+.ai-summary-label{font-size:8px;font-weight:700;letter-spacing:2px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;margin-bottom:5px;}
+.ai-summary-text{font-size:12px;color:#60a5fa;font-family:'JetBrains Mono',monospace;line-height:1.6;}
+
+.ai-suggestions-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.ai-suggest-item{background:#0a84ff08;border:1px solid #0a84ff20;border-radius:10px;padding:9px 11px;}
+.ai-suggest-item-label{font-size:8px;font-weight:700;letter-spacing:1.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;text-transform:uppercase;margin-bottom:5px;}
+.ai-suggest-item-val{font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;}
+.ai-suggest-item-val.sev-high{color:var(--red);}
+.ai-suggest-item-val.sev-medium{color:var(--amber);}
+.ai-suggest-item-val.sev-low{color:var(--green);}
+
+.ai-svc-chips{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:12px;}
+.ai-chip{background:#0a84ff18;border:1px solid #0a84ff35;color:var(--blue);padding:4px 11px;border-radius:20px;font-size:9px;font-weight:700;font-family:'JetBrains Mono',monospace;letter-spacing:.5px;}
+
 .ai-apply-btn{
-  display:none;width:100%;padding:10px;
-  border-radius:9px;border:1px solid #0a84ff40;
-  background:#0a84ff18;color:var(--blue);
-  font-size:10px;font-weight:700;
-  font-family:'JetBrains Mono',monospace;
-  cursor:pointer;letter-spacing:1.5px;
-  transition:all .15s;
+  width:100%;padding:12px;border-radius:10px;border:1.5px solid #0a84ff40;
+  background:linear-gradient(135deg,#0a84ff18,#0a84ff25);color:var(--blue);
+  font-size:11px;font-weight:700;font-family:'JetBrains Mono',monospace;
+  cursor:pointer;letter-spacing:1.5px;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
 }
 .ai-apply-btn:active{background:#0a84ff30;}
-.ai-apply-btn.applied{
-  background:#30d15815;border-color:#30d15840;color:var(--green);
-}
+.ai-apply-btn.applied{background:linear-gradient(135deg,#30d15818,#30d15825);border-color:#30d15840;color:var(--green);}
 
-/* FIELD */
 .field{margin-bottom:13px;}
 .field label{display:block;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:'JetBrains Mono',monospace;}
 input[type=text],input[type=tel],textarea{
@@ -144,38 +141,21 @@ input:focus,textarea:focus{border-color:var(--red-b);}
 textarea{height:74px;resize:none;line-height:1.5;}
 input::placeholder,textarea::placeholder{color:var(--muted);}
 
-/* SEVERITY */
 .sev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.sev-btn{
-  padding:11px 4px;border-radius:10px;border:1px solid var(--border);
-  background:var(--bg);font-size:10px;font-weight:700;letter-spacing:1.5px;
-  font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;
-  transition:all .15s;color:var(--muted);
-}
+.sev-btn{padding:11px 4px;border-radius:10px;border:1px solid var(--border);background:var(--bg);font-size:10px;font-weight:700;letter-spacing:1.5px;font-family:'JetBrains Mono',monospace;cursor:pointer;text-align:center;transition:all .15s;color:var(--muted);}
 .sev-btn.low.on{background:var(--green-dim);border-color:#30d15850;color:var(--green);}
 .sev-btn.medium.on{background:var(--amber-dim);border-color:#ff9f0a50;color:var(--amber);}
 .sev-btn.high.on{background:var(--red-dim);border-color:var(--red-b);color:var(--red);}
 
-/* SERVICES */
 .svc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
-.svc-btn{
-  padding:14px 6px;border-radius:12px;border:1px solid var(--border);
-  background:var(--bg);cursor:pointer;text-align:center;
-  transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;
-}
+.svc-btn{padding:14px 6px;border-radius:12px;border:1px solid var(--border);background:var(--bg);cursor:pointer;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:6px;}
 .svc-icon{font-size:22px;line-height:1;}
 .svc-name{font-size:9px;font-weight:700;letter-spacing:.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 .svc-btn.on{border-color:var(--red-b);background:var(--red-dim);}
 .svc-btn.on .svc-name{color:var(--red);}
 .svc-btn:active{transform:scale(.95);}
 
-/* CAMERA */
-.cam-box{
-  border:1.5px dashed var(--border);border-radius:12px;overflow:hidden;
-  position:relative;background:var(--bg);min-height:160px;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;
-  transition:border-color .2s;
-}
+.cam-box{border:1.5px dashed var(--border);border-radius:12px;overflow:hidden;position:relative;background:var(--bg);min-height:160px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:border-color .2s;}
 .cam-box:active{border-color:var(--red-b);}
 .cam-ph{text-align:center;padding:28px 16px;}
 .cam-ph .ci{font-size:32px;margin-bottom:8px;opacity:.3;}
@@ -183,40 +163,18 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 .cam-ph small{font-size:10px;color:var(--subtle);margin-top:3px;display:block;}
 #photo-preview{width:100%;max-height:220px;object-fit:cover;display:none;border-radius:10px;}
 #photo-input{display:none;}
-.retake-btn{
-  position:absolute;bottom:8px;right:8px;
-  background:rgba(0,0,0,.75);border:1px solid var(--border);
-  color:var(--text);font-size:10px;padding:5px 10px;border-radius:6px;
-  font-family:'JetBrains Mono',monospace;cursor:pointer;display:none;
-}
+.retake-btn{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,.75);border:1px solid var(--border);color:var(--text);font-size:10px;padding:5px 10px;border-radius:6px;font-family:'JetBrains Mono',monospace;cursor:pointer;display:none;}
 
-/* SHARE ROW */
 .share-row{display:flex;gap:8px;}
-.sh-btn{
-  flex:1;padding:12px 6px;border-radius:10px;border:1px solid var(--border);
-  background:var(--bg);cursor:pointer;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;gap:5px;
-  font-size:11px;font-weight:700;color:var(--muted);
-  font-family:'JetBrains Mono',monospace;
-}
+.sh-btn{flex:1;padding:12px 6px;border-radius:10px;border:1px solid var(--border);background:var(--bg);cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11px;font-weight:700;color:var(--muted);font-family:'JetBrains Mono',monospace;}
 .sh-btn:active{transform:scale(.97);}
-.sh-btn.wa:active{background:#25d36618;border-color:#25d36650;color:#25d366;}
-.sh-btn.cp:active{background:var(--blue-dim);border-color:#0a84ff40;color:var(--blue);}
-.sh-btn.sm:active{background:var(--amber-dim);border-color:#ff9f0a40;color:var(--amber);}
 
-/* SUBMIT */
-.submit-btn{
-  width:100%;padding:17px;border-radius:14px;border:none;
-  background:var(--red);color:#fff;
-  font-size:15px;font-weight:800;font-family:'Syne',sans-serif;
-  cursor:pointer;transition:all .15s;
-  display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;
-}
+.submit-btn{width:100%;padding:17px;border-radius:14px;border:none;background:var(--red);color:#fff;font-size:15px;font-weight:800;font-family:'Syne',sans-serif;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:4px;}
 .submit-btn:active{transform:scale(.98);background:#cc2f2f;}
 .submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
 .spinner{width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
 
-/* SUCCESS */
 .suc-hero{text-align:center;padding:28px 16px 20px;}
 .suc-badge{width:76px;height:76px;background:var(--green-dim);border:2px solid #30d15840;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:30px;}
 .suc-title{font-size:22px;font-weight:800;margin-bottom:8px;}
@@ -226,31 +184,11 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 .info-row.b{background:var(--blue-dim);border:1px solid #0a84ff30;color:var(--blue);}
 .info-row.a{background:var(--amber-dim);border:1px solid #ff9f0a30;color:var(--amber);}
 .info-row.r{background:var(--red-dim);border:1px solid var(--red-b);color:var(--red);}
-.map-btn{
-  display:flex;align-items:center;justify-content:center;gap:8px;
-  width:100%;padding:14px;border-radius:12px;
-  background:var(--blue-dim);border:1px solid #0a84ff30;
-  color:var(--blue);font-size:13px;font-weight:700;
-  font-family:'JetBrains Mono',monospace;text-decoration:none;margin-bottom:10px;
-}
-.map-btn:active{background:#0a84ff22;}
-.again-btn{
-  width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);
-  background:transparent;color:var(--muted);font-size:13px;font-weight:700;
-  font-family:'Syne',sans-serif;cursor:pointer;
-}
-.again-btn:active{background:var(--bg2);}
+.map-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px;border-radius:12px;background:var(--blue-dim);border:1px solid #0a84ff30;color:var(--blue);font-size:13px;font-weight:700;font-family:'JetBrains Mono',monospace;text-decoration:none;margin-bottom:10px;}
+.again-btn{width:100%;padding:14px;border-radius:12px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:13px;font-weight:700;font-family:'Syne',sans-serif;cursor:pointer;}
 .suc-photo{width:100%;max-height:200px;object-fit:cover;display:none;}
 
-/* TOAST */
-.toast{
-  position:fixed;bottom:28px;left:50%;transform:translateX(-50%);
-  background:var(--bg2);border:1px solid var(--green);
-  color:var(--green);padding:11px 18px;border-radius:10px;
-  font-size:12px;font-family:'JetBrains Mono',monospace;
-  z-index:9999;white-space:nowrap;max-width:92vw;text-align:center;
-  animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.6);
-}
+.toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%);background:var(--bg2);border:1px solid var(--green);color:var(--green);padding:11px 18px;border-radius:10px;font-size:12px;font-family:'JetBrains Mono',monospace;z-index:9999;white-space:nowrap;max-width:92vw;text-align:center;animation:toastIn .3s ease;box-shadow:0 8px 32px rgba(0,0,0,.6);}
 .toast.err{border-color:var(--red);color:var(--red);}
 @keyframes toastIn{from{opacity:0;transform:translateX(-50%) translateY(10px);}to{opacity:1;transform:translateX(-50%) translateY(0);}}
 </style>
@@ -258,7 +196,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 <body>
 <div class="app">
 
-<!-- HEADER -->
 <div class="header">
   <div class="logo">
     <div class="logo-icon">&#9888;</div>
@@ -267,42 +204,59 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
   <div class="live-pill"><div class="pulse"></div>SOS</div>
 </div>
 
-<!-- FORM PAGE -->
 <div class="page active" id="page-form">
 
-  <!-- GPS STRIP -->
   <div class="gps-strip" id="gps-strip" onclick="getLocation()">
     <span style="font-size:15px">📍</span>
     <div style="flex:1;line-height:1.4" id="gps-txt">Tap to get your location</div>
     <div class="gps-dot on" id="gps-dot"></div>
   </div>
 
-  <!-- AI SUGGESTION BOX -->
+  <!-- AI BOX -->
   <div class="ai-box" id="ai-box">
     <div class="ai-box-header">
       <div class="ai-icon">🤖</div>
       <span class="ai-label">AI Suggestion</span>
-      <div class="ai-spinner" id="ai-spinner"></div>
+      <span class="ai-status-pill thinking" id="ai-status-pill">Thinking...</span>
     </div>
-    <div class="ai-summary" id="ai-summary"></div>
-    <div class="ai-svc-label" id="ai-svc-label">SUGGESTED SERVICES</div>
-    <div class="ai-chips" id="ai-chips"></div>
-    <button class="ai-apply-btn" id="ai-apply-btn" onclick="applyAISuggestion()">
-      ✓ &nbsp;APPLY AI SUGGESTIONS
-    </button>
+
+    <div class="ai-thinking" id="ai-thinking">
+      <div class="ai-thinking-dot"></div>
+      <div class="ai-thinking-dot"></div>
+      <div class="ai-thinking-dot"></div>
+      <span style="font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-left:4px;">Analyzing incident...</span>
+    </div>
+
+    <div class="ai-result" id="ai-result">
+      <div class="ai-summary-box">
+        <div class="ai-summary-label">AI Analysis</div>
+        <div class="ai-summary-text" id="ai-summary-text"></div>
+      </div>
+
+      <div class="ai-suggestions-grid">
+        <div class="ai-suggest-item">
+          <div class="ai-suggest-item-label">Severity</div>
+          <div class="ai-suggest-item-val" id="ai-sev-val">—</div>
+        </div>
+        <div class="ai-suggest-item">
+          <div class="ai-suggest-item-label">Services</div>
+          <div class="ai-suggest-item-val" style="color:var(--blue)" id="ai-svc-count">—</div>
+        </div>
+      </div>
+
+      <div class="ai-svc-chips" id="ai-svc-chips"></div>
+
+      <button class="ai-apply-btn" id="ai-apply-btn" onclick="applyAISuggestion()">
+        ✦ &nbsp;APPLY AI SUGGESTIONS
+      </button>
+    </div>
   </div>
 
-  <!-- WHAT HAPPENED -->
   <div class="card">
     <div class="slabel">What Happened</div>
     <div class="field">
       <label>Incident Title</label>
-      <input
-        id="title"
-        type="text"
-        placeholder="e.g. Fire at market, Road accident..."
-        oninput="onTitleInput(this.value)"
-      />
+      <input id="title" type="text" placeholder="e.g. Fire at market, Road accident..." oninput="onTitleInput(this.value)"/>
     </div>
     <div class="field" style="margin-bottom:0">
       <label>Description</label>
@@ -310,7 +264,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <!-- PHOTO -->
   <div class="card">
     <div class="slabel">Photo Proof</div>
     <div class="cam-box" id="cam-box" onclick="triggerCam()">
@@ -325,7 +278,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)"/>
   </div>
 
-  <!-- SERVICES -->
   <div class="card">
     <div class="slabel">Call For Help</div>
     <div class="svc-grid">
@@ -350,7 +302,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <!-- SEVERITY -->
   <div class="card">
     <div class="slabel">Severity Level</div>
     <div class="sev-grid">
@@ -360,7 +311,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <!-- YOUR INFO -->
   <div class="card">
     <div class="slabel">Your Info</div>
     <div class="field">
@@ -373,13 +323,12 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
-  <!-- SHARE -->
   <div class="card">
     <div class="slabel">Share Location Now</div>
     <div class="share-row">
       <div class="sh-btn wa" onclick="shareWA()"><span>💬</span>WhatsApp</div>
-      <div class="sh-btn sm" onclick="shareSMS()"><span>📱</span>SMS</div>
-      <div class="sh-btn cp" onclick="copyLoc()"><span>📋</span>Copy</div>
+      <div class="sh-btn" onclick="shareSMS()"><span>📱</span>SMS</div>
+      <div class="sh-btn" onclick="copyLoc()"><span>📋</span>Copy</div>
     </div>
   </div>
 
@@ -388,7 +337,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
   </button>
 </div>
 
-<!-- SUCCESS PAGE -->
 <div class="page" id="page-success">
   <div class="card" style="padding:0;overflow:hidden;">
     <img id="suc-photo" class="suc-photo" alt=""/>
@@ -413,8 +361,8 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     <div class="slabel">Share with Family</div>
     <div class="share-row">
       <div class="sh-btn wa" onclick="shareWA()"><span>💬</span>WhatsApp</div>
-      <div class="sh-btn sm" onclick="shareSMS()"><span>📱</span>SMS</div>
-      <div class="sh-btn cp" onclick="copyLoc()"><span>📋</span>Copy Link</div>
+      <div class="sh-btn" onclick="shareSMS()"><span>📱</span>SMS</div>
+      <div class="sh-btn" onclick="copyLoc()"><span>📋</span>Copy Link</div>
     </div>
   </div>
 
@@ -424,6 +372,9 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 </div>
 
 <script>
+// ── CONFIG ──
+const GEMINI_API_KEY = 'AIzaSyAkugGZeTOHKXN1ADMex_Ye_ofIHXTb8Z0';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
 let coords = null;
@@ -434,11 +385,20 @@ let alertId = null;
 let watchId = null;
 let aiSuggestion = null;
 let analyzeTimer = null;
+let lastAnalyzedTitle = '';
 
-// ── AUTO LOCATION ON LOAD ──
+// Available services mapping — Gemini ko pata ho kya options hain
+const SVC_MAP = {
+  'Police': 'Police',
+  'Fire Brigade': 'Fire Brigade',
+  'Ambulance': 'Ambulance',
+  'Disaster Relief': 'Disaster Relief',
+  'Electricity Dept': 'Electricity Dept',
+  'Coast Guard': 'Coast Guard'
+};
+
 window.addEventListener('load', getLocation);
 
-// ── GPS ──
 function getLocation() {
   const dot = document.getElementById('gps-dot');
   const txt = document.getElementById('gps-txt');
@@ -465,7 +425,6 @@ function getLocation() {
   );
 }
 
-// ── CAMERA ──
 function triggerCam(e) {
   if (e) e.stopPropagation();
   document.getElementById('photo-input').click();
@@ -485,14 +444,12 @@ function handlePhoto(input) {
   reader.readAsDataURL(file);
 }
 
-// ── SEVERITY ──
 function setSev(val, el) {
   severity = val;
   document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
 }
 
-// ── SERVICES ──
 function toggleSvc(el, name) {
   el.classList.toggle('on');
   if (services.includes(name)) {
@@ -504,82 +461,130 @@ function toggleSvc(el, name) {
 
 // ── AI TITLE INPUT ──
 function onTitleInput(val) {
-  clearTimeout(analyzeTimer);
   const trimmed = val.trim();
-
-  // Agar title clear ho gaya
   if (trimmed.length < 4) {
+    clearTimeout(analyzeTimer);
     document.getElementById('ai-box').style.display = 'none';
     aiSuggestion = null;
+    lastAnalyzedTitle = '';
     return;
   }
-
-  // 1.5 sec debounce
-  analyzeTimer = setTimeout(() => analyzeWithAI(trimmed), 1500);
+  if (trimmed === lastAnalyzedTitle) return;
+  showAIThinking();
+  clearTimeout(analyzeTimer);
+  analyzeTimer = setTimeout(() => analyzeWithGemini(trimmed), 1500);
 }
 
-// ── GEMINI AI ANALYZE ──
-async function analyzeWithAI(title) {
-  const box      = document.getElementById('ai-box');
-  const spinner  = document.getElementById('ai-spinner');
-  const summary  = document.getElementById('ai-summary');
-  const svcLabel = document.getElementById('ai-svc-label');
-  const chips    = document.getElementById('ai-chips');
-  const applyBtn = document.getElementById('ai-apply-btn');
-
-  // Show box with spinner
+function showAIThinking() {
+  const box = document.getElementById('ai-box');
+  const thinking = document.getElementById('ai-thinking');
+  const result = document.getElementById('ai-result');
+  const pill = document.getElementById('ai-status-pill');
   box.style.display = 'block';
-  spinner.style.display = 'block';
-  summary.style.display = 'none';
-  svcLabel.style.display = 'none';
-  chips.innerHTML = '';
-  applyBtn.style.display = 'none';
-  applyBtn.className = 'ai-apply-btn';
-  applyBtn.textContent = '✓  APPLY AI SUGGESTIONS';
+  thinking.style.display = 'flex';
+  result.style.display = 'none';
+  pill.className = 'ai-status-pill thinking';
+  pill.textContent = 'Thinking...';
+}
+
+// ── GEMINI API CALL ──
+async function analyzeWithGemini(title) {
+  const prompt = `You are an emergency response AI. Analyze this incident title and respond ONLY with valid JSON (no markdown, no explanation).
+
+Incident: "${title}"
+
+Available services: Police, Fire Brigade, Ambulance, Disaster Relief, Electricity Dept, Coast Guard
+
+Respond with this exact JSON structure:
+{
+  "summary": "2-3 sentence analysis of the incident and immediate risks",
+  "severity": "low" or "medium" or "high",
+  "services": ["array of relevant service names from available list only"],
+  "suggested_description": "A helpful pre-filled description for the reporter to edit"
+}
+
+Rules:
+- Fire incidents: always include Fire Brigade + Ambulance
+- Accidents: Police + Ambulance
+- Flooding/natural disaster: Disaster Relief + Ambulance
+- Electric hazard: Electricity Dept + Police
+- severity high = life threatening, medium = serious but stable, low = minor
+- Only use services from the available list`;
 
   try {
-    const res = await fetch(`${SERVER}/api/alerts/analyze`, {
+    const res = await fetch(GEMINI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ title })
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.3,
+          maxOutputTokens: 500
+        }
+      })
     });
 
+    if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
+
     const data = await res.json();
-    if (!data.success) throw new Error('AI failed');
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 
-    aiSuggestion = data;
-    spinner.style.display = 'none';
+    // Clean up response — remove markdown fences if any
+    const cleaned = rawText.replace(/```json\n?/gi, '').replace(/```\n?/gi, '').trim();
+    const parsed = JSON.parse(cleaned);
 
-    // Summary
-    summary.textContent = '→ ' + data.summary;
-    summary.style.display = 'block';
-
-    // Service chips
-    if (data.services && data.services.length > 0) {
-      chips.innerHTML = data.services.map(s =>
-        `<span class="ai-chip">${s.toUpperCase()}</span>`
-      ).join('');
-      svcLabel.style.display = 'block';
-    }
-
-    applyBtn.style.display = 'block';
+    aiSuggestion = parsed;
+    lastAnalyzedTitle = title;
+    showAIResult(parsed);
 
   } catch (err) {
-    spinner.style.display = 'none';
-    box.style.display = 'none';
-    aiSuggestion = null;
+    console.error('Gemini error:', err);
+    const pill = document.getElementById('ai-status-pill');
+    const thinking = document.getElementById('ai-thinking');
+    pill.className = 'ai-status-pill err';
+    pill.textContent = 'Error';
+    thinking.style.display = 'none';
+    // Show retry hint
+    const result = document.getElementById('ai-result');
+    result.style.display = 'none';
   }
 }
 
-// ── APPLY AI SUGGESTION ──
+function showAIResult(data) {
+  const thinking = document.getElementById('ai-thinking');
+  const result = document.getElementById('ai-result');
+  const pill = document.getElementById('ai-status-pill');
+
+  thinking.style.display = 'none';
+  result.style.display = 'block';
+  pill.className = 'ai-status-pill done';
+  pill.textContent = '✓ Ready';
+
+  document.getElementById('ai-summary-text').textContent = data.summary || '';
+
+  const sevVal = document.getElementById('ai-sev-val');
+  sevVal.textContent = (data.severity || 'medium').toUpperCase();
+  sevVal.className = `ai-suggest-item-val sev-${data.severity || 'medium'}`;
+
+  const svcs = data.services || [];
+  document.getElementById('ai-svc-count').textContent = svcs.length + ' selected';
+
+  const chipsEl = document.getElementById('ai-svc-chips');
+  chipsEl.innerHTML = svcs.map(s => `<span class="ai-chip">${s.toUpperCase()}</span>`).join('');
+
+  const applyBtn = document.getElementById('ai-apply-btn');
+  applyBtn.className = 'ai-apply-btn';
+  applyBtn.innerHTML = '✦ &nbsp;APPLY AI SUGGESTIONS';
+  applyBtn.onclick = applyAISuggestion;
+}
+
 function applyAISuggestion() {
   if (!aiSuggestion) return;
 
-  // 1. Services auto-select
+  // Services auto-select
   document.querySelectorAll('.svc-btn').forEach(btn => btn.classList.remove('on'));
   services = [];
-
-  aiSuggestion.services.forEach(svcName => {
+  (aiSuggestion.services || []).forEach(svcName => {
     const btn = document.querySelector(`.svc-btn[data-svc="${svcName}"]`);
     if (btn) {
       btn.classList.add('on');
@@ -587,32 +592,27 @@ function applyAISuggestion() {
     }
   });
 
-  // 2. Severity set
+  // Severity set
   if (aiSuggestion.severity) {
     document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
     const sevBtn = document.querySelector(`.sev-btn.${aiSuggestion.severity}`);
-    if (sevBtn) {
-      sevBtn.classList.add('on');
-      severity = aiSuggestion.severity;
-    }
+    if (sevBtn) { sevBtn.classList.add('on'); severity = aiSuggestion.severity; }
   }
 
-  // 3. Description suggest (sirf agar blank ho)
+  // Description auto fill (only if blank)
   const descField = document.getElementById('desc');
   if (!descField.value.trim() && aiSuggestion.suggested_description) {
     descField.value = aiSuggestion.suggested_description;
   }
 
-  // Button update
   const applyBtn = document.getElementById('ai-apply-btn');
   applyBtn.className = 'ai-apply-btn applied';
-  applyBtn.textContent = '✓ APPLIED';
+  applyBtn.innerHTML = '✓ &nbsp;APPLIED SUCCESSFULLY';
   applyBtn.onclick = null;
 
   showToast('✓ AI suggestions applied!');
 }
 
-// ── SHARE / COPY ──
 function getMapLink() {
   return coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
 }
@@ -645,7 +645,6 @@ function copyLoc() {
     });
 }
 
-// ── LIVE TRACKING ──
 function startTracking(id) {
   if (!navigator.geolocation) return;
   document.getElementById('track-row').style.display = 'flex';
@@ -665,16 +664,15 @@ function startTracking(id) {
   );
 }
 
-// ── SUBMIT ──
 async function submitReport() {
   const title = document.getElementById('title').value.trim();
   const desc  = document.getElementById('desc').value.trim();
   const name  = document.getElementById('name').value.trim();
   const phone = document.getElementById('phone').value.trim();
 
-  if (!title)              { showToast('Incident title likhna zaroori hai!', true); return; }
-  if (!name)               { showToast('Apna naam likhna zaroori hai!', true); return; }
-  if (!coords)             { showToast('Pehle location lo!', true); return; }
+  if (!title)                { showToast('Incident title likhna zaroori hai!', true); return; }
+  if (!name)                 { showToast('Apna naam likhna zaroori hai!', true); return; }
+  if (!coords)               { showToast('Pehle location lo!', true); return; }
   if (services.length === 0) { showToast('Kam se kam ek service select karo!', true); return; }
 
   const btn = document.getElementById('submit-btn');
@@ -685,13 +683,7 @@ async function submitReport() {
     const res = await fetch(`${SERVER}/api/alerts`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        name, phone, title,
-        description: desc,
-        severity, services,
-        photo: photoB64,
-        location: coords
-      })
+      body: JSON.stringify({ name, phone, title, description: desc, severity, services, photo: photoB64, location: coords })
     });
 
     const data = await res.json();
@@ -701,18 +693,16 @@ async function submitReport() {
     startTracking(alertId);
     showSuccess();
   } catch (err) {
-    showToast('Server se connect nahi hua — server chal raha hai?', true);
+    showToast('Server se connect nahi hua!', true);
     btn.disabled = false;
     document.getElementById('btn-content').innerHTML = '🚨 &nbsp;Report Emergency';
   }
 }
 
-// ── SUCCESS ──
 function showSuccess() {
   if (photoB64) {
     const p = document.getElementById('suc-photo');
-    p.src = photoB64;
-    p.style.display = 'block';
+    p.src = photoB64; p.style.display = 'block';
   }
   if (services.length > 0) {
     document.getElementById('svc-txt').textContent = services.join(', ') + ' notified';
@@ -725,12 +715,11 @@ function showSuccess() {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-// ── RESET ──
 function resetForm() {
   if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-  ['title', 'desc', 'name', 'phone'].forEach(id => document.getElementById(id).value = '');
+  ['title','desc','name','phone'].forEach(id => document.getElementById(id).value = '');
   photoB64 = null; alertId = null; services = []; severity = 'medium';
-  aiSuggestion = null; clearTimeout(analyzeTimer);
+  aiSuggestion = null; lastAnalyzedTitle = ''; clearTimeout(analyzeTimer);
 
   document.getElementById('photo-preview').style.display = 'none';
   document.getElementById('cam-ph').style.display = 'block';
@@ -749,7 +738,6 @@ function resetForm() {
   getLocation();
 }
 
-// ── TOAST ──
 function showToast(msg, isErr) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
