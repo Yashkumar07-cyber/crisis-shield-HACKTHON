@@ -6,8 +6,10 @@ const {
   updateStatus,
   resolveAlert,
   updateLocation,
+  analyzeIncident,
 } = require('../controllers/alertController');
 
+router.post('/analyze', analyzeIncident);
 router.post('/', createAlert);
 router.get('/', getAlerts);
 router.patch('/:id/status', updateStatus);

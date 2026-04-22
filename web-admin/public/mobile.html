@@ -67,6 +67,71 @@ body::before{
 .gps-dot{width:8px;height:8px;border-radius:50%;background:var(--blue);flex-shrink:0;}
 .gps-dot.on{animation:pulse 1.4s infinite;}
 
+/* AI BOX */
+.ai-box{
+  display:none;
+  background:#0a84ff08;
+  border:1px solid #0a84ff30;
+  border-radius:14px;
+  padding:14px 16px;
+  margin-bottom:12px;
+  animation:fadeUp .3s ease both;
+}
+.ai-box-header{
+  display:flex;align-items:center;gap:8px;margin-bottom:10px;
+}
+.ai-icon{
+  width:24px;height:24px;background:var(--blue);border-radius:7px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;flex-shrink:0;
+}
+.ai-label{
+  font-size:9px;font-weight:700;letter-spacing:2.5px;
+  color:var(--blue);font-family:'JetBrains Mono',monospace;
+  text-transform:uppercase;flex:1;
+}
+.ai-spinner{
+  width:14px;height:14px;
+  border:2px solid #0a84ff30;border-top-color:var(--blue);
+  border-radius:50%;animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.ai-summary{
+  font-size:11.5px;color:#60a5fa;
+  font-family:'JetBrains Mono',monospace;
+  margin-bottom:10px;line-height:1.5;
+  display:none;
+}
+.ai-svc-label{
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  color:var(--muted);font-family:'JetBrains Mono',monospace;
+  margin-bottom:7px;display:none;
+}
+.ai-chips{
+  display:flex;gap:6px;flex-wrap:wrap;
+  margin-bottom:12px;
+}
+.ai-chip{
+  background:#0a84ff20;border:1px solid #0a84ff40;
+  color:var(--blue);padding:4px 11px;border-radius:20px;
+  font-size:9px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;
+  letter-spacing:.5px;
+}
+.ai-apply-btn{
+  display:none;width:100%;padding:10px;
+  border-radius:9px;border:1px solid #0a84ff40;
+  background:#0a84ff18;color:var(--blue);
+  font-size:10px;font-weight:700;
+  font-family:'JetBrains Mono',monospace;
+  cursor:pointer;letter-spacing:1.5px;
+  transition:all .15s;
+}
+.ai-apply-btn:active{background:#0a84ff30;}
+.ai-apply-btn.applied{
+  background:#30d15815;border-color:#30d15840;color:var(--green);
+}
+
 /* FIELD */
 .field{margin-bottom:13px;}
 .field label{display:block;font-size:10px;font-weight:700;letter-spacing:2px;color:var(--muted);text-transform:uppercase;margin-bottom:6px;font-family:'JetBrains Mono',monospace;}
@@ -150,7 +215,6 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 .submit-btn:active{transform:scale(.98);background:#cc2f2f;}
 .submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
 .spinner{width:18px;height:18px;border:2px solid #fff4;border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
 
 /* SUCCESS */
 .suc-hero{text-align:center;padding:28px 16px 20px;}
@@ -206,17 +270,39 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 <!-- FORM PAGE -->
 <div class="page active" id="page-form">
 
+  <!-- GPS STRIP -->
   <div class="gps-strip" id="gps-strip" onclick="getLocation()">
     <span style="font-size:15px">📍</span>
     <div style="flex:1;line-height:1.4" id="gps-txt">Tap to get your location</div>
     <div class="gps-dot on" id="gps-dot"></div>
   </div>
 
+  <!-- AI SUGGESTION BOX -->
+  <div class="ai-box" id="ai-box">
+    <div class="ai-box-header">
+      <div class="ai-icon">🤖</div>
+      <span class="ai-label">AI Suggestion</span>
+      <div class="ai-spinner" id="ai-spinner"></div>
+    </div>
+    <div class="ai-summary" id="ai-summary"></div>
+    <div class="ai-svc-label" id="ai-svc-label">SUGGESTED SERVICES</div>
+    <div class="ai-chips" id="ai-chips"></div>
+    <button class="ai-apply-btn" id="ai-apply-btn" onclick="applyAISuggestion()">
+      ✓ &nbsp;APPLY AI SUGGESTIONS
+    </button>
+  </div>
+
+  <!-- WHAT HAPPENED -->
   <div class="card">
     <div class="slabel">What Happened</div>
     <div class="field">
       <label>Incident Title</label>
-      <input id="title" type="text" placeholder="e.g. Fire at market, Road accident..."/>
+      <input
+        id="title"
+        type="text"
+        placeholder="e.g. Fire at market, Road accident..."
+        oninput="onTitleInput(this.value)"
+      />
     </div>
     <div class="field" style="margin-bottom:0">
       <label>Description</label>
@@ -224,6 +310,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
+  <!-- PHOTO -->
   <div class="card">
     <div class="slabel">Photo Proof</div>
     <div class="cam-box" id="cam-box" onclick="triggerCam()">
@@ -238,30 +325,32 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     <input type="file" id="photo-input" accept="image/*" capture="environment" onchange="handlePhoto(this)"/>
   </div>
 
+  <!-- SERVICES -->
   <div class="card">
     <div class="slabel">Call For Help</div>
     <div class="svc-grid">
-      <div class="svc-btn" onclick="toggleSvc(this,'Police')">
+      <div class="svc-btn" data-svc="Police" onclick="toggleSvc(this,'Police')">
         <div class="svc-icon">🚔</div><div class="svc-name">POLICE</div>
       </div>
-      <div class="svc-btn" onclick="toggleSvc(this,'Fire Brigade')">
+      <div class="svc-btn" data-svc="Fire Brigade" onclick="toggleSvc(this,'Fire Brigade')">
         <div class="svc-icon">🚒</div><div class="svc-name">FIRE</div>
       </div>
-      <div class="svc-btn" onclick="toggleSvc(this,'Ambulance')">
+      <div class="svc-btn" data-svc="Ambulance" onclick="toggleSvc(this,'Ambulance')">
         <div class="svc-icon">🚑</div><div class="svc-name">AMBULANCE</div>
       </div>
-      <div class="svc-btn" onclick="toggleSvc(this,'Disaster Relief')">
+      <div class="svc-btn" data-svc="Disaster Relief" onclick="toggleSvc(this,'Disaster Relief')">
         <div class="svc-icon">⛑️</div><div class="svc-name">DISASTER</div>
       </div>
-      <div class="svc-btn" onclick="toggleSvc(this,'Electricity Dept')">
+      <div class="svc-btn" data-svc="Electricity Dept" onclick="toggleSvc(this,'Electricity Dept')">
         <div class="svc-icon">⚡</div><div class="svc-name">ELECTRIC</div>
       </div>
-      <div class="svc-btn" onclick="toggleSvc(this,'Coast Guard')">
+      <div class="svc-btn" data-svc="Coast Guard" onclick="toggleSvc(this,'Coast Guard')">
         <div class="svc-icon">⚓</div><div class="svc-name">COAST GRD</div>
       </div>
     </div>
   </div>
 
+  <!-- SEVERITY -->
   <div class="card">
     <div class="slabel">Severity Level</div>
     <div class="sev-grid">
@@ -271,6 +360,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
+  <!-- YOUR INFO -->
   <div class="card">
     <div class="slabel">Your Info</div>
     <div class="field">
@@ -283,6 +373,7 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
     </div>
   </div>
 
+  <!-- SHARE -->
   <div class="card">
     <div class="slabel">Share Location Now</div>
     <div class="share-row">
@@ -333,13 +424,21 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 </div>
 
 <script>
-// ✅ FIXED: Render server URL
 const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
-let coords = null, severity = 'medium', services = [], photoB64 = null, alertId = null, watchId = null;
+let coords = null;
+let severity = 'medium';
+let services = [];
+let photoB64 = null;
+let alertId = null;
+let watchId = null;
+let aiSuggestion = null;
+let analyzeTimer = null;
 
+// ── AUTO LOCATION ON LOAD ──
 window.addEventListener('load', getLocation);
 
+// ── GPS ──
 function getLocation() {
   const dot = document.getElementById('gps-dot');
   const txt = document.getElementById('gps-txt');
@@ -350,6 +449,7 @@ function getLocation() {
     pos => {
       coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       dot.style.background = 'var(--green)';
+      dot.className = 'gps-dot';
       txt.innerHTML = `<b style="color:var(--green)">Got it!</b> &nbsp;${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`;
       const s = document.getElementById('gps-strip');
       s.style.background = 'var(--green-dim)';
@@ -357,17 +457,23 @@ function getLocation() {
       s.style.color = 'var(--green)';
     },
     () => {
-      dot.style.background = 'var(--red)'; dot.className = 'gps-dot';
+      dot.style.background = 'var(--red)';
+      dot.className = 'gps-dot';
       txt.textContent = 'Location denied — tap to retry';
     },
     { enableHighAccuracy: true, timeout: 12000 }
   );
 }
 
-function triggerCam(e) { if (e) e.stopPropagation(); document.getElementById('photo-input').click(); }
+// ── CAMERA ──
+function triggerCam(e) {
+  if (e) e.stopPropagation();
+  document.getElementById('photo-input').click();
+}
 
 function handlePhoto(input) {
-  const file = input.files[0]; if (!file) return;
+  const file = input.files[0];
+  if (!file) return;
   const reader = new FileReader();
   reader.onload = ev => {
     photoB64 = ev.target.result;
@@ -379,19 +485,137 @@ function handlePhoto(input) {
   reader.readAsDataURL(file);
 }
 
+// ── SEVERITY ──
 function setSev(val, el) {
   severity = val;
   document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
   el.classList.add('on');
 }
 
+// ── SERVICES ──
 function toggleSvc(el, name) {
   el.classList.toggle('on');
-  if (services.includes(name)) services = services.filter(s => s !== name);
-  else services.push(name);
+  if (services.includes(name)) {
+    services = services.filter(s => s !== name);
+  } else {
+    services.push(name);
+  }
 }
 
-function getMapLink() { return coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null; }
+// ── AI TITLE INPUT ──
+function onTitleInput(val) {
+  clearTimeout(analyzeTimer);
+  const trimmed = val.trim();
+
+  // Agar title clear ho gaya
+  if (trimmed.length < 4) {
+    document.getElementById('ai-box').style.display = 'none';
+    aiSuggestion = null;
+    return;
+  }
+
+  // 1.5 sec debounce
+  analyzeTimer = setTimeout(() => analyzeWithAI(trimmed), 1500);
+}
+
+// ── GEMINI AI ANALYZE ──
+async function analyzeWithAI(title) {
+  const box      = document.getElementById('ai-box');
+  const spinner  = document.getElementById('ai-spinner');
+  const summary  = document.getElementById('ai-summary');
+  const svcLabel = document.getElementById('ai-svc-label');
+  const chips    = document.getElementById('ai-chips');
+  const applyBtn = document.getElementById('ai-apply-btn');
+
+  // Show box with spinner
+  box.style.display = 'block';
+  spinner.style.display = 'block';
+  summary.style.display = 'none';
+  svcLabel.style.display = 'none';
+  chips.innerHTML = '';
+  applyBtn.style.display = 'none';
+  applyBtn.className = 'ai-apply-btn';
+  applyBtn.textContent = '✓  APPLY AI SUGGESTIONS';
+
+  try {
+    const res = await fetch(`${SERVER}/api/alerts/analyze`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title })
+    });
+
+    const data = await res.json();
+    if (!data.success) throw new Error('AI failed');
+
+    aiSuggestion = data;
+    spinner.style.display = 'none';
+
+    // Summary
+    summary.textContent = '→ ' + data.summary;
+    summary.style.display = 'block';
+
+    // Service chips
+    if (data.services && data.services.length > 0) {
+      chips.innerHTML = data.services.map(s =>
+        `<span class="ai-chip">${s.toUpperCase()}</span>`
+      ).join('');
+      svcLabel.style.display = 'block';
+    }
+
+    applyBtn.style.display = 'block';
+
+  } catch (err) {
+    spinner.style.display = 'none';
+    box.style.display = 'none';
+    aiSuggestion = null;
+  }
+}
+
+// ── APPLY AI SUGGESTION ──
+function applyAISuggestion() {
+  if (!aiSuggestion) return;
+
+  // 1. Services auto-select
+  document.querySelectorAll('.svc-btn').forEach(btn => btn.classList.remove('on'));
+  services = [];
+
+  aiSuggestion.services.forEach(svcName => {
+    const btn = document.querySelector(`.svc-btn[data-svc="${svcName}"]`);
+    if (btn) {
+      btn.classList.add('on');
+      services.push(svcName);
+    }
+  });
+
+  // 2. Severity set
+  if (aiSuggestion.severity) {
+    document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
+    const sevBtn = document.querySelector(`.sev-btn.${aiSuggestion.severity}`);
+    if (sevBtn) {
+      sevBtn.classList.add('on');
+      severity = aiSuggestion.severity;
+    }
+  }
+
+  // 3. Description suggest (sirf agar blank ho)
+  const descField = document.getElementById('desc');
+  if (!descField.value.trim() && aiSuggestion.suggested_description) {
+    descField.value = aiSuggestion.suggested_description;
+  }
+
+  // Button update
+  const applyBtn = document.getElementById('ai-apply-btn');
+  applyBtn.className = 'ai-apply-btn applied';
+  applyBtn.textContent = '✓ APPLIED';
+  applyBtn.onclick = null;
+
+  showToast('✓ AI suggestions applied!');
+}
+
+// ── SHARE / COPY ──
+function getMapLink() {
+  return coords ? `https://maps.google.com/?q=${coords.lat},${coords.lng}` : null;
+}
 
 function shareWA() {
   const link = getMapLink();
@@ -412,12 +636,16 @@ function copyLoc() {
     .then(() => showToast('Location link copied!'))
     .catch(() => {
       const el = document.createElement('textarea');
-      el.value = link; document.body.appendChild(el); el.select();
-      document.execCommand('copy'); document.body.removeChild(el);
+      el.value = link;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
       showToast('Location link copied!');
     });
 }
 
+// ── LIVE TRACKING ──
 function startTracking(id) {
   if (!navigator.geolocation) return;
   document.getElementById('track-row').style.display = 'flex';
@@ -437,15 +665,16 @@ function startTracking(id) {
   );
 }
 
+// ── SUBMIT ──
 async function submitReport() {
   const title = document.getElementById('title').value.trim();
   const desc  = document.getElementById('desc').value.trim();
   const name  = document.getElementById('name').value.trim();
   const phone = document.getElementById('phone').value.trim();
 
-  if (!title)           { showToast('Incident title likhna zaroori hai!', true); return; }
-  if (!name)            { showToast('Apna naam likhna zaroori hai!', true); return; }
-  if (!coords)          { showToast('Pehle location lo!', true); return; }
+  if (!title)              { showToast('Incident title likhna zaroori hai!', true); return; }
+  if (!name)               { showToast('Apna naam likhna zaroori hai!', true); return; }
+  if (!coords)             { showToast('Pehle location lo!', true); return; }
   if (services.length === 0) { showToast('Kam se kam ek service select karo!', true); return; }
 
   const btn = document.getElementById('submit-btn');
@@ -457,12 +686,9 @@ async function submitReport() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        name,
-        phone,
-        title,
+        name, phone, title,
         description: desc,
-        severity,
-        services,
+        severity, services,
         photo: photoB64,
         location: coords
       })
@@ -481,25 +707,40 @@ async function submitReport() {
   }
 }
 
+// ── SUCCESS ──
 function showSuccess() {
-  if (photoB64) { const p = document.getElementById('suc-photo'); p.src = photoB64; p.style.display = 'block'; }
-  if (services.length > 0) document.getElementById('svc-txt').textContent = services.join(', ') + ' notified';
-  if (coords) document.getElementById('map-btn').href = getMapLink();
+  if (photoB64) {
+    const p = document.getElementById('suc-photo');
+    p.src = photoB64;
+    p.style.display = 'block';
+  }
+  if (services.length > 0) {
+    document.getElementById('svc-txt').textContent = services.join(', ') + ' notified';
+  }
+  if (coords) {
+    document.getElementById('map-btn').href = getMapLink();
+  }
   document.getElementById('page-form').classList.remove('active');
   document.getElementById('page-success').classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
+// ── RESET ──
 function resetForm() {
   if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
   ['title', 'desc', 'name', 'phone'].forEach(id => document.getElementById(id).value = '');
   photoB64 = null; alertId = null; services = []; severity = 'medium';
+  aiSuggestion = null; clearTimeout(analyzeTimer);
+
   document.getElementById('photo-preview').style.display = 'none';
   document.getElementById('cam-ph').style.display = 'block';
   document.getElementById('retake-btn').style.display = 'none';
+  document.getElementById('ai-box').style.display = 'none';
+
   document.querySelectorAll('.svc-btn').forEach(b => b.classList.remove('on'));
   document.querySelectorAll('.sev-btn').forEach(b => b.classList.remove('on'));
   document.querySelector('.sev-btn.medium').classList.add('on');
+
   document.getElementById('submit-btn').disabled = false;
   document.getElementById('btn-content').innerHTML = '🚨 &nbsp;Report Emergency';
   document.getElementById('page-success').classList.remove('active');
@@ -508,11 +749,13 @@ function resetForm() {
   getLocation();
 }
 
+// ── TOAST ──
 function showToast(msg, isErr) {
   document.querySelectorAll('.toast').forEach(t => t.remove());
   const t = document.createElement('div');
   t.className = 'toast' + (isErr ? ' err' : '');
-  t.textContent = msg; document.body.appendChild(t);
+  t.textContent = msg;
+  document.body.appendChild(t);
   setTimeout(() => t.remove(), 3500);
 }
 </script>
