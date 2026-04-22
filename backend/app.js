@@ -9,11 +9,15 @@ const app = express();
 app.use(cors({
   origin: [
     'https://crisis-admin.netlify.app',
-    'http://localhost:3000'
-  ]
+    'http://localhost:3000',
+    'https://crisis-shield-hackthon.onrender.com'
+  ],
+  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+  credentials: true
 }));
 
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(express.static(path.join(__dirname, '../web-admin/public')));
 

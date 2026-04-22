@@ -470,7 +470,6 @@ export default function Dashboard({ onLogout }) {
     <>
       <style>{css}</style>
       <div className="bg-root">
-
         <header className="hdr">
           <div className="logo">
             <div className="logo-icon">⚠</div>
