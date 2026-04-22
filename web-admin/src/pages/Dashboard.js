@@ -84,17 +84,33 @@ const css = `
   }
   .logo-wordmark { font-size: 16px; font-weight: 700; color: var(--text-primary); letter-spacing: -0.3px; }
   .logo-wordmark span { color: var(--red); }
-  .hdr-nav { display: flex; gap: 4px; }
-  .nav-btn {
-    background: transparent; border: none;
-    padding: 6px 16px; border-radius: var(--radius-sm);
-    font-family: 'Outfit', sans-serif; font-size: 13.5px; font-weight: 500;
-    color: var(--text-secondary); cursor: pointer; transition: all 0.15s;
+
+  /* ── GLOWING DASHBOARD HEADING ── */
+  .dashboard-heading {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
-  .nav-btn:hover { background: var(--bg-page); color: var(--text-primary); }
-  .nav-btn.active {
-    background: #EFF6FF; color: var(--blue); font-weight: 600;
+  .dashboard-heading h1 {
+    font-family: 'Outfit', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: linear-gradient(90deg, #2563EB 0%, #60A5FA 40%, #E11D48 70%, #FB7185 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(37,99,235,0.55)) drop-shadow(0 0 22px rgba(225,29,72,0.35));
+    animation: headingGlow 3s ease-in-out infinite alternate;
+    margin: 0;
   }
+  @keyframes headingGlow {
+    0%   { filter: drop-shadow(0 0 8px rgba(37,99,235,0.6)) drop-shadow(0 0 20px rgba(225,29,72,0.30)); }
+    100% { filter: drop-shadow(0 0 16px rgba(37,99,235,0.9)) drop-shadow(0 0 32px rgba(225,29,72,0.55)); }
+  }
+
   .hdr-right { display: flex; align-items: center; gap: 10px; }
   .live-pill {
     display: flex; align-items: center; gap: 7px;
@@ -411,9 +427,9 @@ const css = `
     .stats-row { grid-template-columns: repeat(3, 1fr); }
     .hdr { padding: 0 18px; }
     .list-col { padding: 16px; }
-    .hdr-nav { display: none; }
     .toolbar { padding: 10px 18px; }
     .ai-strip { padding: 10px 18px; }
+    .dashboard-heading h1 { font-size: 16px; }
   }
 `;
 
@@ -549,17 +565,18 @@ export default function Dashboard({ onLogout }) {
       <style>{css}</style>
       <div>
 
-        {/* HEADER */}
+        {/* HEADER — nav tabs removed, glowing heading added */}
         <header className="hdr">
           <div className="logo">
             <div className="logo-icon">⚠</div>
             <div className="logo-wordmark">Crisis<span>Shield</span></div>
           </div>
-          <nav className="hdr-nav">
-            <button className="nav-btn active">Dashboard</button>
-            <button className="nav-btn">Incidents</button>
-            <button className="nav-btn">Reports</button>
-          </nav>
+
+          {/* ── GLOWING DASHBOARD HEADING ── */}
+          <div className="dashboard-heading">
+            <h1>Crisis Dashboard</h1>
+          </div>
+
           <div className="hdr-right">
             <div className="live-pill"><div className="live-dot" />LIVE</div>
             <div className="clock">{time}</div>
