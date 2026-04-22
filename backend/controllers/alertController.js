@@ -1,6 +1,55 @@
 const Alert = require('../models/Alert');
 const { sendSMSAlert } = require('../services/twilioService');
 
+// ============================================================
+// AI AUTO TRACKER - Har 3 min mein status auto update karta hai
+// ============================================================
+const STATUS_PIPELINE = ['PENDING', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'RESOLVED'];
+
+const startAITracker = (io) => {
+  console.log('🤖 AI Tracker started - updating every 3 minutes');
+
+  setInterval(async () => {
+    try {
+      // Sirf incomplete alerts track karo
+      const activeAlerts = await Alert.find({
+        status: { $nin: ['RESOLVED'] }
+      });
+
+      for (const alert of activeAlerts) {
+        const currentIdx = STATUS_PIPELINE.indexOf(alert.status);
+
+        // Agar last status nahi hai toh next pe move karo
+        if (currentIdx < STATUS_PIPELINE.length - 1) {
+          const nextStatus = STATUS_PIPELINE[currentIdx + 1];
+
+          await Alert.findByIdAndUpdate(alert._id, {
+            status: nextStatus,
+            lastAIUpdate: new Date(),
+          });
+
+          // Socket se frontend ko update bhejo
+          if (io) {
+            const updatedAlert = await Alert.findById(alert._id);
+            io.emit('alert_updated', updatedAlert);
+            io.emit('ai_status_update', {
+              id: alert._id,
+              title: alert.title || alert.name,
+              oldStatus: alert.status,
+              newStatus: nextStatus,
+              updatedAt: new Date(),
+            });
+          }
+
+          console.log(`🤖 AI Updated: ${alert.title || alert.name} → ${nextStatus}`);
+        }
+      }
+    } catch (err) {
+      console.error('AI Tracker error:', err);
+    }
+  }, 3 * 60 * 1000); // 3 minutes
+};
+
 // POST /api/alerts
 const createAlert = async (req, res) => {
   try {
@@ -36,7 +85,7 @@ const getAlerts = async (req, res) => {
   }
 };
 
-// PATCH /api/alerts/:id/status
+// PATCH /api/alerts/:id/status  (Manual update)
 const updateStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -47,7 +96,7 @@ const updateStatus = async (req, res) => {
 
     const alert = await Alert.findByIdAndUpdate(
       req.params.id,
-      { status },
+      { status, manualUpdate: true },
       { new: true }
     );
 
@@ -62,7 +111,7 @@ const updateStatus = async (req, res) => {
   }
 };
 
-// PATCH /api/alerts/:id/resolve (backward compat)
+// PATCH /api/alerts/:id/resolve
 const resolveAlert = async (req, res) => {
   req.body.status = 'RESOLVED';
   return updateStatus(req, res);
@@ -87,4 +136,4 @@ const updateLocation = async (req, res) => {
   }
 };
 
-module.exports = { createAlert, getAlerts, updateStatus, resolveAlert, updateLocation };
+module.exports = { createAlert, getAlerts, updateStatus, resolveAlert, updateLocation, startAITracker };

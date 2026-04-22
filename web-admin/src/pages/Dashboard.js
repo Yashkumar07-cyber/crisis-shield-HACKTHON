@@ -1,169 +1,363 @@
 import React, { useEffect, useState, useRef } from 'react';
 import io from 'socket.io-client';
+
 const SERVER = 'https://crisis-shield-hackthon.onrender.com';
 
 const SEV_CONFIG = {
-  high:   { bg: '#ff3b3b22', border: '#ff3b3b', text: '#ff6b6b', dot: '#ff3b3b', label: 'HIGH' },
-  medium: { bg: '#ff9f0a22', border: '#ff9f0a', text: '#ffb830', dot: '#ff9f0a', label: 'MED' },
-  low:    { bg: '#30d15822', border: '#30d158', text: '#34d862', dot: '#30d158', label: 'LOW' },
+  high:   { bg: 'rgba(220,38,38,0.08)',  border: '#dc2626', text: '#dc2626', label: 'HIGH', glow: 'rgba(220,38,38,0.15)' },
+  medium: { bg: 'rgba(217,119,6,0.08)',  border: '#d97706', text: '#d97706', label: 'MED',  glow: 'rgba(217,119,6,0.15)' },
+  low:    { bg: 'rgba(5,150,105,0.08)',  border: '#059669', text: '#059669', label: 'LOW',  glow: 'rgba(5,150,105,0.15)' },
 };
 
 const STATUS_PIPELINE = ['PENDING', 'DISPATCHED', 'EN_ROUTE', 'ARRIVED', 'RESOLVED'];
 const STATUS_CONFIG = {
-  PENDING:    { bg: '#4a556822', text: '#94a3b8', icon: '⏳', label: 'Pending' },
-  DISPATCHED: { bg: '#0a84ff22', text: '#409cff', icon: '📡', label: 'Dispatched' },
-  EN_ROUTE:   { bg: '#ff9f0a22', text: '#ffb830', icon: '🚨', label: 'En Route' },
-  ARRIVED:    { bg: '#bf5af222', text: '#da8fff', icon: '📍', label: 'Arrived' },
-  RESOLVED:   { bg: '#30d15822', text: '#34d862', icon: '✅', label: 'Completed' },
+  PENDING:    { bg: 'rgba(100,116,139,0.1)', text: '#64748b', icon: '⏳', label: 'Pending',    color: '#64748b' },
+  DISPATCHED: { bg: 'rgba(37,99,235,0.1)',   text: '#2563eb', icon: '📡', label: 'Dispatched', color: '#2563eb' },
+  EN_ROUTE:   { bg: 'rgba(217,119,6,0.1)',   text: '#d97706', icon: '🚨', label: 'En Route',   color: '#d97706' },
+  ARRIVED:    { bg: 'rgba(124,58,237,0.1)',  text: '#7c3aed', icon: '📍', label: 'Arrived',    color: '#7c3aed' },
+  RESOLVED:   { bg: 'rgba(5,150,105,0.1)',   text: '#059669', icon: '✅', label: 'Completed',  color: '#059669' },
 };
 
-const SERVICES_ICONS = {
-  police: '🚔', fire: '🚒', ambulance: '🚑',
-  disaster: '🏚', electricity: '⚡', coast: '⛵',
-};
+const SERVICES_ICONS = { police:'🚔', fire:'🚒', ambulance:'🚑', disaster:'🏚', electricity:'⚡', coast:'⛵' };
 
 const css = `
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;700;800&display=swap');
-  * { margin:0; padding:0; box-sizing:border-box; }
-  body { background:#060910; color:#e2e8f0; font-family:'Syne',sans-serif; min-height:100vh; }
-  ::-webkit-scrollbar { width:4px; }
-  ::-webkit-scrollbar-track { background:#0d1117; }
-  ::-webkit-scrollbar-thumb { background:#1e2d3d; border-radius:2px; }
-  .cs-root { min-height:100vh; background:#060910; position:relative; overflow-x:hidden; }
-  .cs-grid-bg {
-    position:fixed; inset:0;
-    background-image: linear-gradient(rgba(255,59,59,0.03) 1px, transparent 1px), linear-gradient(90deg,rgba(255,59,59,0.03) 1px, transparent 1px);
-    background-size:40px 40px; pointer-events:none; z-index:0;
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Mono:wght@400;500&display=swap');
+
+  *,*::before,*::after { margin:0; padding:0; box-sizing:border-box }
+  :root {
+    --red:#dc2626; --blue:#2563eb; --green:#059669; --amber:#d97706; --purple:#7c3aed;
+    --bg:#f1f5f9; --bg2:#ffffff; --bg3:#f8fafc;
+    --border:#e2e8f0; --border2:#cbd5e1;
+    --text:#1e293b; --text-mid:#64748b; --text-dim:#94a3b8;
+    --shadow:0 1px 3px rgba(0,0,0,0.06),0 4px 12px rgba(0,0,0,0.04);
+    --shadow-md:0 4px 16px rgba(0,0,0,0.08),0 1px 4px rgba(0,0,0,0.04);
   }
-  .cs-scanline {
-    position:fixed; inset:0;
-    background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.07) 2px,rgba(0,0,0,0.07) 4px);
-    pointer-events:none; z-index:1;
-  }
-  .cs-content { position:relative; z-index:2; }
-  .cs-header {
+  html,body { background:var(--bg); color:var(--text); font-family:'DM Sans',sans-serif; min-height:100vh; overflow-x:hidden }
+  ::-webkit-scrollbar { width:4px }
+  ::-webkit-scrollbar-track { background:transparent }
+  ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px }
+
+  .bg-root { min-height:100vh; background:var(--bg) }
+
+  .hdr {
     display:flex; align-items:center; justify-content:space-between;
-    padding:0 32px; height:64px; border-bottom:1px solid #ff3b3b18;
-    background:rgba(6,9,16,0.92); backdrop-filter:blur(12px);
+    padding:0 28px; height:60px;
+    background:var(--bg2); border-bottom:1px solid var(--border);
     position:sticky; top:0; z-index:100;
+    box-shadow:0 1px 0 var(--border),0 2px 8px rgba(0,0,0,0.04)
   }
-  .cs-logo { display:flex; align-items:center; gap:12px; }
-  .cs-logo-icon { width:32px; height:32px; background:#ff3b3b; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
-  .cs-logo-text { font-size:18px; font-weight:800; letter-spacing:-0.5px; color:#f8fafc; }
-  .cs-logo-text span { color:#ff3b3b; }
-  .cs-header-right { display:flex; align-items:center; gap:12px; }
-  .cs-live-badge { display:flex; align-items:center; gap:6px; background:#ff3b3b15; border:1px solid #ff3b3b40; padding:4px 12px; border-radius:20px; font-size:11px; font-weight:700; font-family:'JetBrains Mono',monospace; color:#ff6b6b; letter-spacing:1px; }
-  .cs-live-dot { width:6px; height:6px; background:#ff3b3b; border-radius:50%; animation:livePulse 1.4s ease-in-out infinite; }
-  .cs-reporter-btn { background:#30d15815; border:1px solid #30d15840; color:#34d862; padding:6px 14px; border-radius:6px; font-size:11px; font-weight:700; font-family:'Syne',sans-serif; cursor:pointer; letter-spacing:1px; text-transform:uppercase; transition:all 0.15s; text-decoration:none; display:flex; align-items:center; gap:6px; }
-  .cs-reporter-btn:hover { background:#30d15825; border-color:#30d15860; }
-  .cs-logout-btn { background:#ff3b3b15; border:1px solid #ff3b3b30; color:#ff6b6b; padding:6px 14px; border-radius:6px; font-size:11px; font-weight:700; font-family:'Syne',sans-serif; cursor:pointer; letter-spacing:1px; text-transform:uppercase; transition:all 0.15s; }
-  .cs-logout-btn:hover { background:#ff3b3b25; border-color:#ff3b3b60; }
-  .cs-time { font-family:'JetBrains Mono',monospace; font-size:12px; color:#4a5568; }
-  @keyframes livePulse { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.7); } }
-  .cs-stats { display:grid; grid-template-columns:repeat(5,1fr); gap:1px; background:#ff3b3b10; border-bottom:1px solid #ff3b3b18; }
-  .cs-stat { background:#060910; padding:20px 24px; position:relative; overflow:hidden; transition:background 0.2s; cursor:default; }
-  .cs-stat::after { content:''; position:absolute; bottom:0; left:0; right:0; height:2px; background:var(--accent); transform:scaleX(0); transition:transform 0.3s; transform-origin:left; }
-  .cs-stat:hover::after { transform:scaleX(1); }
-  .cs-stat:hover { background:#0d1117; }
-  .cs-stat-num { font-size:38px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--accent); line-height:1; margin-bottom:6px; letter-spacing:-2px; }
-  .cs-stat-label { font-size:10px; font-weight:600; color:#4a5568; letter-spacing:2px; text-transform:uppercase; }
-  .cs-stat-bg-num { position:absolute; right:12px; top:50%; transform:translateY(-50%); font-size:70px; font-weight:800; font-family:'JetBrains Mono',monospace; color:var(--accent); opacity:0.04; line-height:1; pointer-events:none; letter-spacing:-4px; }
-  .cs-toolbar { display:flex; align-items:center; justify-content:space-between; padding:14px 32px; border-bottom:1px solid #ffffff08; gap:12px; flex-wrap:wrap; }
-  .cs-toolbar-left { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .cs-filter-btn { background:#0d1117; border:1px solid #1e2d3d; color:#94a3b8; padding:6px 12px; border-radius:6px; font-size:11px; font-family:'Syne',sans-serif; font-weight:600; cursor:pointer; transition:all 0.15s; letter-spacing:0.5px; }
-  .cs-filter-btn:hover,.cs-filter-btn.active { background:#ff3b3b15; border-color:#ff3b3b40; color:#ff6b6b; }
-  .cs-filter-btn.sev-high.active  { background:#ff3b3b22; border-color:#ff3b3b60; color:#ff6b6b; }
-  .cs-filter-btn.sev-medium.active{ background:#ff9f0a22; border-color:#ff9f0a60; color:#ffb830; }
-  .cs-filter-btn.sev-low.active   { background:#30d15822; border-color:#30d15860; color:#34d862; }
-  .cs-divider { width:1px; height:20px; background:#1e2d3d; }
-  .cs-count { font-family:'JetBrains Mono',monospace; font-size:12px; color:#4a5568; }
-  .cs-section-header { padding:20px 32px 0; display:flex; align-items:center; gap:12px; }
-  .cs-section-title { font-size:11px; font-weight:700; letter-spacing:3px; text-transform:uppercase; color:#2d3748; }
-  .cs-section-line { flex:1; height:1px; background:#1a2332; }
-  .cs-list { padding:20px 32px; display:flex; flex-direction:column; gap:14px; }
-  .cs-empty { text-align:center; padding:80px 0; color:#2d3748; }
-  .cs-empty-icon { font-size:48px; margin-bottom:16px; opacity:0.3; }
-  .cs-empty-text { font-size:13px; font-weight:600; letter-spacing:2px; text-transform:uppercase; }
-  .cs-card { background:#0d1117; border:1px solid #1a2332; border-radius:14px; padding:0; position:relative; overflow:hidden; transition:all 0.2s; animation:cardIn 0.4s ease both; }
-  @keyframes cardIn { from { opacity:0; transform:translateY(12px); } to { opacity:1; transform:translateY(0); } }
-  .cs-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--sev-color); border-radius:14px 0 0 14px; }
-  .cs-card:hover { border-color:#1e2d3d; background:#0f1520; transform:translateY(-1px); }
-  .cs-card.new-flash { border-color:#ff3b3b60; background:#ff3b3b08; animation:newFlash 0.6s ease both; }
-  @keyframes newFlash { 0% { box-shadow:0 0 0 0 #ff3b3b44; } 50% { box-shadow:0 0 24px 6px #ff3b3b22; } 100% { box-shadow:none; } }
-  .cs-card-inner { padding:20px 24px 20px 28px; }
-  .cs-card-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:10px; }
-  .cs-card-title { font-size:15px; font-weight:700; color:#f1f5f9; letter-spacing:-0.2px; line-height:1.3; }
-  .cs-badges { display:flex; gap:6px; flex-shrink:0; flex-wrap:wrap; align-items:center; }
-  .cs-badge { font-size:10px; font-weight:700; padding:3px 9px; border-radius:4px; letter-spacing:1px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; border:1px solid transparent; }
-  .cs-card-meta { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
-  .cs-meta-item { display:flex; align-items:center; gap:5px; font-size:11px; color:#4a5568; font-family:'JetBrains Mono',monospace; }
-  .cs-meta-dot { width:3px; height:3px; border-radius:50%; background:#2d3748; }
-  .cs-desc { font-size:13px; color:#64748b; line-height:1.6; margin-bottom:12px; }
-  .cs-services { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:14px; }
-  .cs-service-tag { background:#ffffff08; border:1px solid #1e2d3d; padding:3px 10px; border-radius:20px; font-size:11px; color:#64748b; font-family:'JetBrains Mono',monospace; }
-  .cs-photo { width:100%; max-height:180px; object-fit:cover; border-radius:8px; margin-bottom:14px; border:1px solid #1e2d3d; }
-  .cs-pipeline { display:flex; align-items:center; gap:0; margin-bottom:16px; background:#060910; border-radius:8px; padding:10px 14px; border:1px solid #1a2332; overflow-x:auto; }
-  .cs-pipeline-step { display:flex; flex-direction:column; align-items:center; gap:4px; flex:1; min-width:60px; position:relative; cursor:pointer; transition:opacity 0.15s; }
-  .cs-pipeline-step .step-icon { width:28px; height:28px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:13px; border:2px solid #1e2d3d; background:#0d1117; transition:all 0.2s; }
-  .cs-pipeline-step.done .step-icon { background:var(--step-color); border-color:var(--step-color); }
-  .cs-pipeline-step.active .step-icon { border-color:var(--step-color); box-shadow:0 0 12px var(--step-color); background:color-mix(in srgb, var(--step-color) 20%, transparent); }
-  .cs-pipeline-step .step-label { font-size:9px; color:#2d3748; font-weight:600; letter-spacing:1px; text-transform:uppercase; font-family:'JetBrains Mono',monospace; text-align:center; }
-  .cs-pipeline-step.done .step-label, .cs-pipeline-step.active .step-label { color:var(--step-color); }
-  .cs-pipeline-line { flex:1; height:1px; background:#1e2d3d; min-width:12px; margin-top:-16px; }
-  .cs-pipeline-line.done { background:var(--line-color); }
-  .cs-card-footer { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
-  .cs-map-link { display:flex; align-items:center; gap:6px; font-size:11px; color:#0a84ff; text-decoration:none; font-family:'JetBrains Mono',monospace; font-weight:500; padding:5px 10px; background:#0a84ff12; border:1px solid #0a84ff25; border-radius:5px; transition:all 0.15s; }
-  .cs-map-link:hover { background:#0a84ff22; border-color:#0a84ff50; color:#409cff; }
-  .cs-no-loc { font-size:11px; color:#2d3748; font-family:'JetBrains Mono',monospace; }
-  .cs-status-sel { background:#060910; color:#94a3b8; border:1px solid #1e2d3d; border-radius:6px; padding:5px 24px 5px 10px; font-size:11px; font-family:'Syne',sans-serif; font-weight:600; cursor:pointer; transition:all 0.15s; appearance:none; background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%234a5568' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat:no-repeat; background-position:right 8px center; }
-  .cs-status-sel:hover { border-color:#2d3748; color:#e2e8f0; }
-  .cs-toast { position:fixed; bottom:24px; right:24px; background:#0d1117; border:1px solid #ff3b3b40; color:#ff6b6b; padding:12px 18px; border-radius:8px; font-size:12px; font-family:'JetBrains Mono',monospace; font-weight:500; z-index:9999; display:flex; align-items:center; gap:8px; animation:toastIn 0.3s ease; max-width:320px; box-shadow:0 8px 32px rgba(0,0,0,0.5); }
-  @keyframes toastIn { from { opacity:0; transform:translateY(10px) scale(0.97); } to { opacity:1; transform:translateY(0) scale(1); } }
-  .cs-toast-dot { width:6px; height:6px; background:#ff3b3b; border-radius:50%; flex-shrink:0; animation:livePulse 1.4s ease-in-out infinite; }
-  @media(max-width:768px) {
-    .cs-stats { grid-template-columns:repeat(3,1fr); }
-    .cs-header { padding:0 16px; }
-    .cs-list { padding:12px 16px; }
-    .cs-toolbar { padding:10px 16px; }
-    .cs-section-header { padding:14px 16px 0; }
+  .logo { display:flex; align-items:center; gap:10px }
+  .logo-icon {
+    width:34px; height:34px;
+    background:linear-gradient(135deg,#dc2626,#b91c1c);
+    border-radius:9px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; box-shadow:0 2px 8px rgba(220,38,38,0.25)
+  }
+  .logo-name { font-size:15px; font-weight:700; color:var(--text) }
+  .logo-name span { color:var(--red) }
+  .hdr-nav { display:flex; gap:2px }
+  .nav-btn {
+    background:transparent; border:none; color:var(--text-mid);
+    padding:6px 14px; border-radius:8px;
+    font-family:'DM Sans',sans-serif; font-size:13px; font-weight:500;
+    cursor:pointer; transition:all 0.15s
+  }
+  .nav-btn:hover { background:var(--bg); color:var(--text) }
+  .nav-btn.active { background:#eff6ff; color:var(--blue); font-weight:600 }
+  .hdr-right { display:flex; align-items:center; gap:8px }
+  .live-pill {
+    display:flex; align-items:center; gap:6px;
+    background:#fef2f2; border:1px solid #fecaca;
+    padding:4px 12px; border-radius:20px;
+    font-family:'DM Mono',monospace; font-size:11px; font-weight:500;
+    color:var(--red); letter-spacing:1px
+  }
+  .live-dot {
+    width:6px; height:6px; background:var(--red); border-radius:50%;
+    animation:livePulse 1.5s ease-in-out infinite
+  }
+  @keyframes livePulse {
+    0%,100% { opacity:1; transform:scale(1) }
+    50% { opacity:0.4; transform:scale(0.6) }
+  }
+  .clock {
+    font-family:'DM Mono',monospace; font-size:13px; color:var(--text-mid);
+    padding:4px 10px; background:var(--bg); border:1px solid var(--border); border-radius:7px
+  }
+  .reporter-btn {
+    display:flex; align-items:center; gap:6px;
+    background:#f0fdf4; border:1px solid #bbf7d0; color:var(--green);
+    padding:5px 13px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; text-decoration:none; transition:all 0.15s
+  }
+  .reporter-btn:hover { background:#dcfce7; box-shadow:0 2px 8px rgba(5,150,105,0.15) }
+  .logout-btn {
+    background:#fef2f2; border:1px solid #fecaca; color:var(--red);
+    padding:5px 14px; border-radius:8px; font-size:12px; font-weight:600;
+    cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif
+  }
+  .logout-btn:hover { background:#fee2e2; box-shadow:0 2px 8px rgba(220,38,38,0.15) }
+
+  .stats-row {
+    display:grid; grid-template-columns:repeat(5,1fr);
+    background:var(--bg2); border-bottom:1px solid var(--border)
+  }
+  .stat {
+    padding:20px 24px; position:relative; overflow:hidden;
+    cursor:default; transition:background 0.2s; border-right:1px solid var(--border)
+  }
+  .stat:last-child { border-right:none }
+  .stat:hover { background:var(--bg3) }
+  .stat-num {
+    font-family:'DM Mono',monospace; font-size:36px; font-weight:500;
+    color:var(--sa); line-height:1; margin-bottom:4px;
+    animation:fadeUp 0.5s ease both
+  }
+  .stat:nth-child(1) .stat-num { animation-delay:0.05s }
+  .stat:nth-child(2) .stat-num { animation-delay:0.1s }
+  .stat:nth-child(3) .stat-num { animation-delay:0.15s }
+  .stat:nth-child(4) .stat-num { animation-delay:0.2s }
+  .stat:nth-child(5) .stat-num { animation-delay:0.25s }
+  @keyframes fadeUp { from { opacity:0; transform:translateY(8px) } to { opacity:1; transform:translateY(0) } }
+  .stat-label { font-size:10px; font-weight:600; color:var(--text-dim); letter-spacing:2px; text-transform:uppercase }
+  .stat-bar {
+    position:absolute; bottom:0; left:0; right:0; height:2px;
+    background:var(--sa); opacity:0; transition:opacity 0.2s
+  }
+  .stat:hover .stat-bar { opacity:0.35 }
+
+  .ai-strip {
+    display:flex; align-items:center; gap:12px; padding:9px 28px;
+    background:#eff6ff; border-bottom:1px solid #dbeafe
+  }
+  .ai-orb {
+    width:28px; height:28px; flex-shrink:0;
+    background:#dbeafe; border:1px solid #bfdbfe;
+    border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:14px
+  }
+  .ai-lbl { font-family:'DM Mono',monospace; font-size:9px; font-weight:500; color:var(--blue); letter-spacing:2px; text-transform:uppercase; flex-shrink:0 }
+  .ai-msg { font-size:12px; color:#3b82f6; flex:1 }
+  .ai-msg b { color:var(--blue); font-weight:600 }
+  .ai-timer {
+    font-family:'DM Mono',monospace; font-size:11px; color:var(--blue);
+    background:#dbeafe; border:1px solid #bfdbfe; padding:3px 10px; border-radius:6px; flex-shrink:0
+  }
+
+  .toolbar {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:10px 28px; border-bottom:1px solid var(--border);
+    background:var(--bg2); flex-wrap:wrap; gap:8px
+  }
+  .tbar-l { display:flex; align-items:center; gap:6px; flex-wrap:wrap }
+  .tbar-sep { width:1px; height:16px; background:var(--border2) }
+  .tbar-lbl { font-size:10px; font-weight:600; color:var(--text-dim); letter-spacing:1.5px; text-transform:uppercase }
+  .fb {
+    background:var(--bg); border:1px solid var(--border); color:var(--text-mid);
+    padding:4px 12px; border-radius:6px; font-size:11px; font-weight:500;
+    cursor:pointer; transition:all 0.15s; font-family:'DM Sans',sans-serif
+  }
+  .fb:hover { background:var(--bg3); border-color:var(--border2); color:var(--text) }
+  .fb.on-high   { background:#fef2f2; border-color:#fca5a5; color:var(--red) }
+  .fb.on-medium { background:#fffbeb; border-color:#fcd34d; color:var(--amber) }
+  .fb.on-low    { background:#f0fdf4; border-color:#86efac; color:var(--green) }
+  .fb.on-s      { background:#eff6ff; border-color:#93c5fd; color:var(--blue) }
+  .tbar-count   { font-family:'DM Mono',monospace; font-size:11px; color:var(--text-dim) }
+
+  .layout { display:grid; grid-template-columns:1fr 290px; min-height:calc(100vh - 200px) }
+
+  .list-col { padding:20px 24px; display:flex; flex-direction:column; gap:12px; border-right:1px solid var(--border) }
+  .sec-hd { display:flex; align-items:center; gap:10px; margin-bottom:2px }
+  .sec-title { font-size:10px; font-weight:600; letter-spacing:3px; text-transform:uppercase; color:var(--text-dim) }
+  .sec-line { flex:1; height:1px; background:var(--border) }
+  .empty-state { text-align:center; padding:80px 0 }
+  .empty-icon { font-size:40px; margin-bottom:12px; opacity:0.25 }
+  .empty-txt { font-size:11px; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim) }
+
+  .card {
+    background:var(--bg2); border:1px solid var(--border); border-radius:12px;
+    overflow:hidden; position:relative; transition:all 0.2s;
+    box-shadow:var(--shadow);
+    animation:cardIn 0.4s cubic-bezier(0.16,1,0.3,1) both
+  }
+  @keyframes cardIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+  .card:nth-child(1){ animation-delay:0.04s }
+  .card:nth-child(2){ animation-delay:0.08s }
+  .card:nth-child(3){ animation-delay:0.12s }
+  .card:nth-child(4){ animation-delay:0.16s }
+  .card:nth-child(5){ animation-delay:0.20s }
+  .card:hover { border-color:var(--border2); transform:translateY(-2px); box-shadow:var(--shadow-md) }
+  .card.flash { animation:flashNew 1s ease both }
+  @keyframes flashNew {
+    0%   { box-shadow:var(--shadow),0 0 0 3px rgba(220,38,38,0.25) }
+    100% { box-shadow:var(--shadow) }
+  }
+  .card-accent { position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--sev-c) }
+  .card-body { padding:16px 18px 16px 22px }
+  .card-top { display:flex; align-items:flex-start; justify-content:space-between; gap:10px; margin-bottom:8px }
+  .card-title { font-size:15px; font-weight:600; color:var(--text); line-height:1.35 }
+  .badges { display:flex; gap:5px; flex-shrink:0; flex-wrap:wrap }
+  .badge {
+    font-size:9px; font-weight:600; padding:2px 8px; border-radius:4px;
+    letter-spacing:1px; text-transform:uppercase;
+    font-family:'DM Mono',monospace; border:1px solid transparent
+  }
+  .card-meta { display:flex; align-items:center; gap:7px; margin-bottom:8px; flex-wrap:wrap }
+  .mi { display:flex; align-items:center; gap:4px; font-size:11px; color:var(--text-mid); font-family:'DM Mono',monospace }
+  .ms { width:3px; height:3px; border-radius:50%; background:var(--border2) }
+  .desc { font-size:13px; color:var(--text-mid); line-height:1.6; margin-bottom:10px }
+  .services { display:flex; gap:5px; flex-wrap:wrap; margin-bottom:12px }
+  .svc {
+    background:var(--bg); border:1px solid var(--border); padding:2px 9px;
+    border-radius:20px; font-size:10px; color:var(--text-mid);
+    font-family:'DM Mono',monospace; transition:all 0.15s; cursor:default
+  }
+  .svc:hover { background:var(--bg3); border-color:var(--border2) }
+  .inc-photo { width:100%; max-height:150px; object-fit:cover; border-radius:8px; margin-bottom:12px; border:1px solid var(--border) }
+  .ai-tag {
+    display:inline-flex; align-items:center; gap:5px; margin-bottom:10px;
+    background:#eff6ff; border:1px solid #bfdbfe;
+    padding:2px 9px; border-radius:20px;
+    font-size:9px; font-weight:600; color:var(--blue);
+    font-family:'DM Mono',monospace; letter-spacing:0.5px
+  }
+  .ai-tag-dot { width:4px; height:4px; background:var(--blue); border-radius:50%; animation:livePulse 1.5s ease-in-out infinite }
+
+  .pipeline {
+    display:flex; align-items:center;
+    background:var(--bg); border-radius:10px;
+    padding:10px 12px; border:1px solid var(--border);
+    margin-bottom:12px; overflow-x:auto; gap:0
+  }
+  .ps { display:flex; flex-direction:column; align-items:center; gap:3px; flex:1; min-width:52px; cursor:pointer; transition:all 0.15s }
+  .ps:hover { transform:translateY(-2px) }
+  .ps-icon {
+    width:26px; height:26px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:12px;
+    border:2px solid var(--border); background:var(--bg2); transition:all 0.2s
+  }
+  .ps.done .ps-icon   { background:var(--pc); border-color:var(--pc) }
+  .ps.active .ps-icon { border-color:var(--pc); background:var(--bg2); box-shadow:0 0 0 3px color-mix(in srgb,var(--pc),transparent 80%) }
+  .ps-label {
+    font-size:8px; font-weight:600; color:var(--text-dim);
+    letter-spacing:0.5px; text-transform:uppercase;
+    font-family:'DM Mono',monospace; text-align:center
+  }
+  .ps.done .ps-label,.ps.active .ps-label { color:var(--pc) }
+  .pl { flex:1; height:2px; background:var(--border); min-width:8px; margin-top:-14px; border-radius:2px; transition:background 0.3s }
+  .pl.done { background:var(--lc) }
+
+  .card-ft { display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap }
+  .map-btn {
+    display:flex; align-items:center; gap:5px; font-size:11px; color:var(--blue);
+    text-decoration:none; font-family:'DM Mono',monospace; font-weight:500;
+    padding:5px 11px; background:#eff6ff; border:1px solid #bfdbfe;
+    border-radius:7px; transition:all 0.15s
+  }
+  .map-btn:hover { background:#dbeafe; box-shadow:0 2px 8px rgba(37,99,235,0.15) }
+  .no-loc { font-size:10px; color:var(--text-dim); font-family:'DM Mono',monospace }
+  .status-sel {
+    background:var(--bg2); color:var(--text-mid); border:1px solid var(--border);
+    border-radius:7px; padding:5px 24px 5px 10px; font-size:11px;
+    font-family:'DM Sans',sans-serif; font-weight:500; cursor:pointer; transition:all 0.15s;
+    appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' fill='none'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%2394a3b8' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 8px center;
+    box-shadow:var(--shadow)
+  }
+  .status-sel:hover { border-color:var(--border2) }
+
+  .right-col { background:var(--bg3); padding:20px 16px; display:flex; flex-direction:column; gap:18px; border-left:1px solid var(--border) }
+  .panel-hd {
+    font-size:10px; font-weight:600; letter-spacing:2px; text-transform:uppercase; color:var(--text-dim);
+    margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border)
+  }
+
+  .ai-card { background:#eff6ff; border:1px solid #bfdbfe; border-radius:12px; padding:14px }
+  .ai-card-hd { display:flex; align-items:center; gap:10px; margin-bottom:12px }
+  .ai-avatar {
+    width:34px; height:34px; background:#dbeafe; border:1px solid #bfdbfe;
+    border-radius:9px; display:flex; align-items:center; justify-content:center; font-size:17px
+  }
+  .ai-name { font-size:14px; font-weight:600; color:var(--blue) }
+  .ai-status-txt { font-size:10px; color:#3b82f6; font-family:'DM Mono',monospace }
+  .ai-status-txt b { color:var(--green) }
+  .ai-log-feed { display:flex; flex-direction:column; gap:4px; max-height:140px; overflow-y:auto; margin-bottom:10px }
+  .ai-log-entry {
+    display:flex; gap:6px; padding:5px 8px; background:rgba(255,255,255,0.7);
+    border-radius:7px; border:1px solid #bfdbfe;
+    animation:logIn 0.25s ease
+  }
+  @keyframes logIn { from { opacity:0; transform:translateX(-6px) } to { opacity:1; transform:translateX(0) } }
+  .log-dot { width:5px; height:5px; background:var(--blue); border-radius:50%; flex-shrink:0; margin-top:3px }
+  .log-body { font-size:10px; font-family:'DM Mono',monospace; color:#3b82f6; line-height:1.4 }
+  .log-body b { color:var(--blue) }
+  .countdown-box { text-align:center; padding:10px; background:white; border:1px solid #bfdbfe; border-radius:8px }
+  .countdown-lbl { font-size:9px; font-family:'DM Mono',monospace; color:var(--text-dim); letter-spacing:1.5px; margin-bottom:3px; text-transform:uppercase }
+  .countdown-val { font-family:'DM Mono',monospace; font-size:26px; font-weight:500; color:var(--blue) }
+
+  .qs-list { display:flex; flex-direction:column; gap:5px }
+  .qs-row {
+    display:flex; align-items:center; justify-content:space-between;
+    padding:9px 11px; border-radius:9px;
+    background:var(--bg2); border:1px solid var(--border);
+    transition:all 0.15s; cursor:default
+  }
+  .qs-row:hover { background:var(--bg3); border-color:var(--border2) }
+  .qs-lbl { font-size:12px; color:var(--text-mid); font-weight:500 }
+  .qs-val { font-family:'DM Mono',monospace; font-size:14px; font-weight:500; color:var(--qc) }
+
+  .act-list { display:flex; flex-direction:column; max-height:200px; overflow-y:auto }
+  .act-row { display:flex; gap:8px; padding:7px 0; border-bottom:1px solid var(--border) }
+  .act-dot { width:6px; height:6px; border-radius:50%; background:var(--ac); flex-shrink:0; margin-top:4px }
+  .act-text { font-size:11px; color:var(--text-mid); line-height:1.4 }
+  .act-time { font-size:9px; color:var(--text-dim); font-family:'DM Mono',monospace; margin-top:2px }
+
+  .toast-wrap { position:fixed; bottom:20px; right:20px; display:flex; flex-direction:column; gap:6px; z-index:9999; pointer-events:none }
+  .toast {
+    display:flex; align-items:center; gap:8px; padding:10px 14px; border-radius:10px;
+    font-size:12px; font-family:'DM Sans',sans-serif; font-weight:500;
+    animation:toastIn 0.3s cubic-bezier(0.16,1,0.3,1);
+    max-width:300px; box-shadow:0 4px 20px rgba(0,0,0,0.1),0 1px 4px rgba(0,0,0,0.06)
+  }
+  .toast.t-alert { background:white; border:1px solid #fca5a5; color:var(--red) }
+  .toast.t-ai    { background:white; border:1px solid #93c5fd; color:var(--blue) }
+  .toast.t-ok    { background:white; border:1px solid #86efac; color:var(--green) }
+  .toast-dot { width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; animation:livePulse 1.5s ease-in-out infinite }
+  @keyframes toastIn { from { opacity:0; transform:translateX(12px) } to { opacity:1; transform:translateX(0) } }
+
+  @media(max-width:960px){
+    .layout { grid-template-columns:1fr }
+    .right-col { display:none }
+    .stats-row { grid-template-columns:repeat(3,1fr) }
+    .hdr { padding:0 16px }
+    .list-col { padding:14px }
+    .hdr-nav { display:none }
   }
 `;
 
 const STEP_COLORS = {
-  PENDING:    '#4a5568',
-  DISPATCHED: '#0a84ff',
-  EN_ROUTE:   '#ff9f0a',
-  ARRIVED:    '#bf5af2',
-  RESOLVED:   '#30d158',
+  PENDING:'#64748b', DISPATCHED:'#2563eb', EN_ROUTE:'#d97706', ARRIVED:'#7c3aed', RESOLVED:'#059669'
 };
 
-const NGROK_HEADER = {};
-
-function StatusPipeline({ currentStatus, alertId, onStatusChange }) {
-  const currentIdx = STATUS_PIPELINE.indexOf(currentStatus);
+function Pipeline({ status, alertId, onStatusChange }) {
+  const idx = STATUS_PIPELINE.indexOf(status);
   return (
-    <div className="cs-pipeline">
+    <div className="pipeline">
       {STATUS_PIPELINE.map((step, i) => {
-        const cfg = STATUS_CONFIG[step];
-        const isDone = i < currentIdx;
-        const isActive = i === currentIdx;
         const color = STEP_COLORS[step];
         return (
           <React.Fragment key={step}>
             <div
-              className={`cs-pipeline-step ${isDone ? 'done' : ''} ${isActive ? 'active' : ''}`}
-              style={{ '--step-color': color }}
-              title={`Set to ${cfg.label}`}
+              className={`ps ${i < idx ? 'done' : ''} ${i === idx ? 'active' : ''}`}
+              style={{ '--pc': color }}
               onClick={() => onStatusChange(alertId, step)}
+              title={STATUS_CONFIG[step].label}
             >
-              <div className="step-icon">{cfg.icon}</div>
-              <div className="step-label">{cfg.label}</div>
+              <div className="ps-icon">{STATUS_CONFIG[step].icon}</div>
+              <div className="ps-label">{STATUS_CONFIG[step].label}</div>
             </div>
             {i < STATUS_PIPELINE.length - 1 && (
-              <div
-                className={`cs-pipeline-line ${isDone ? 'done' : ''}`}
-                style={{ '--line-color': color }}
-              />
+              <div className={`pl ${i < idx ? 'done' : ''}`} style={{ '--lc': color }} />
             )}
           </React.Fragment>
         );
@@ -177,8 +371,11 @@ export default function Dashboard({ onLogout }) {
   const [newId, setNewId]         = useState(null);
   const [sevFilter, setSevFilter] = useState('');
   const [staFilter, setStaFilter] = useState('');
-  const [toast, setToast]         = useState('');
+  const [toasts, setToasts]       = useState([]);
   const [time, setTime]           = useState('');
+  const [aiLogs, setAiLogs]       = useState([]);
+  const [countdown, setCountdown] = useState(180);
+  const [activity, setActivity]   = useState([]);
   const socketRef = useRef(null);
 
   useEffect(() => {
@@ -189,254 +386,319 @@ export default function Dashboard({ onLogout }) {
   }, []);
 
   useEffect(() => {
-    fetch(`${SERVER}/api/alerts`, { headers: NGROK_HEADER })
+    const t = setInterval(() => setCountdown(p => p <= 1 ? 180 : p - 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  useEffect(() => {
+    fetch(`${SERVER}/api/alerts`)
       .then(r => r.json())
       .then(d => setAlerts(d.alerts || []));
 
-    socketRef.current = io(SERVER, { extraHeaders: NGROK_HEADER });
+    socketRef.current = io(SERVER);
 
     socketRef.current.on('new_alert', a => {
-      setAlerts(prev => [a, ...prev]);
+      setAlerts(p => [a, ...p]);
       setNewId(a._id);
-      showToast(`🚨 NEW — ${a.title || a.name}`);
+      pushToast(`🚨 NEW — ${a.title || a.name}`, 't-alert');
+      pushAct(`New alert: ${a.title || a.name}`, '#dc2626');
       setTimeout(() => setNewId(null), 4000);
     });
 
-    socketRef.current.on('alert_updated', updated => {
-      setAlerts(prev => prev.map(a => a._id === updated._id ? updated : a));
+    socketRef.current.on('alert_updated', u =>
+      setAlerts(p => p.map(a => a._id === u._id ? u : a))
+    );
+
+    socketRef.current.on('ai_status_update', ({ title, oldStatus, newStatus }) => {
+      const m = `${title || 'Alert'}: ${STATUS_CONFIG[oldStatus]?.label} → ${STATUS_CONFIG[newStatus]?.label}`;
+      pushAiLog(m);
+      pushToast(`🤖 ${m}`, 't-ai');
+      pushAct(`🤖 AI: ${m}`, '#2563eb');
+      setCountdown(180);
     });
 
     socketRef.current.on('location_updated', ({ id, lat, lng }) => {
-      setAlerts(prev => prev.map(a =>
-        a._id === id ? { ...a, location: { ...a.location, lat, lng } } : a
-      ));
-      showToast('📍 Location Updated');
+      setAlerts(p => p.map(a => a._id === id ? { ...a, location: { ...a.location, lat, lng } } : a));
+      pushToast('📍 Location updated', 't-ok');
     });
 
     return () => socketRef.current?.disconnect();
   }, []);
 
-  const showToast = (msg) => {
-    setToast(msg);
-    setTimeout(() => setToast(''), 4000);
+  const pushToast = (msg, type = 't-alert') => {
+    const id = Date.now();
+    setToasts(p => [...p, { id, msg, type }]);
+    setTimeout(() => setToasts(p => p.filter(t => t.id !== id)), 4000);
+  };
+
+  const pushAiLog = msg => {
+    const t = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    setAiLogs(p => [{ msg, t, id: Date.now() }, ...p].slice(0, 20));
+  };
+
+  const pushAct = (text, color) => {
+    const t = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    setActivity(p => [{ text, color, t, id: Date.now() }, ...p].slice(0, 15));
   };
 
   const changeStatus = (id, status) => {
     fetch(`${SERVER}/api/alerts/${id}/status`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...NGROK_HEADER },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status })
     });
-    setAlerts(prev => prev.map(a => a._id === id ? { ...a, status } : a));
-    showToast(`Status → ${STATUS_CONFIG[status]?.label}`);
+    setAlerts(p => p.map(a => a._id === id ? { ...a, status } : a));
+    pushToast(`✅ → ${STATUS_CONFIG[status]?.label}`, 't-ok');
+    pushAct(`Manual: → ${STATUS_CONFIG[status]?.label}`, '#059669');
   };
 
+  const fmt = s => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
   const filtered = alerts.filter(a =>
-    (!sevFilter || a.severity === sevFilter) &&
-    (!staFilter || a.status === staFilter)
+    (!sevFilter || a.severity === sevFilter) && (!staFilter || a.status === staFilter)
   );
+  const activeCount = alerts.filter(a => a.status !== 'RESOLVED').length;
 
   const stats = [
-    { label: 'TOTAL',     value: alerts.length,                                      accent: '#ff3b3b' },
-    { label: 'HIGH',      value: alerts.filter(a => a.severity === 'high').length,   accent: '#ff3b3b' },
-    { label: 'PENDING',   value: alerts.filter(a => a.status === 'PENDING').length,  accent: '#4a5568' },
-    { label: 'EN ROUTE',  value: alerts.filter(a => a.status === 'EN_ROUTE').length, accent: '#ff9f0a' },
-    { label: 'COMPLETED', value: alerts.filter(a => a.status === 'RESOLVED').length, accent: '#30d158' },
+    { label: 'TOTAL',     val: alerts.length,                                     color: '#dc2626' },
+    { label: 'HIGH',      val: alerts.filter(a => a.severity === 'high').length,  color: '#dc2626' },
+    { label: 'PENDING',   val: alerts.filter(a => a.status === 'PENDING').length, color: '#64748b' },
+    { label: 'EN ROUTE',  val: alerts.filter(a => a.status === 'EN_ROUTE').length,color: '#d97706' },
+    { label: 'COMPLETED', val: alerts.filter(a => a.status === 'RESOLVED').length,color: '#059669' },
   ];
 
   return (
     <>
       <style>{css}</style>
-      <div className="cs-root">
-        <div className="cs-grid-bg" />
-        <div className="cs-scanline" />
-        <div className="cs-content">
+      <div className="bg-root">
 
-          <header className="cs-header">
-            <div className="cs-logo">
-              <div className="cs-logo-icon">⚠</div>
-              <div className="cs-logo-text">Crisis<span>Shield</span></div>
-            </div>
-            <div className="cs-header-right">
-              <div className="cs-live-badge">
-                <div className="cs-live-dot" />
-                LIVE
-              </div>
-              <div className="cs-time">{time}</div>
-              <a
-                className="cs-reporter-btn"
-                href={`${SERVER}/mobile.html`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                📱 Reporter Page
-              </a>
-              <button className="cs-logout-btn" onClick={onLogout}>Logout</button>
-            </div>
-          </header>
+        <header className="hdr">
+          <div className="logo">
+            <div className="logo-icon">⚠</div>
+            <div className="logo-name">Crisis<span>Shield</span></div>
+          </div>
+          <nav className="hdr-nav">
+            <button className="nav-btn active">Dashboard</button>
+            <button className="nav-btn">Incidents</button>
+            <button className="nav-btn">Reports</button>
+          </nav>
+          <div className="hdr-right">
+            <div className="live-pill"><div className="live-dot" />LIVE</div>
+            <div className="clock">{time}</div>
+            <a className="reporter-btn" href={`${SERVER}/mobile.html`} target="_blank" rel="noreferrer">📱 Reporter</a>
+            <button className="logout-btn" onClick={onLogout}>Logout</button>
+          </div>
+        </header>
 
-          <div className="cs-stats">
-            {stats.map(s => (
-              <div key={s.label} className="cs-stat" style={{ '--accent': s.accent }}>
-                <div className="cs-stat-num">{String(s.value).padStart(2, '0')}</div>
-                <div className="cs-stat-label">{s.label}</div>
-                <div className="cs-stat-bg-num">{s.value}</div>
-              </div>
+        <div className="stats-row">
+          {stats.map(s => (
+            <div key={s.label} className="stat" style={{ '--sa': s.color }}>
+              <div className="stat-num">{String(s.val).padStart(2, '0')}</div>
+              <div className="stat-label">{s.label}</div>
+              <div className="stat-bar" />
+            </div>
+          ))}
+        </div>
+
+        <div className="ai-strip">
+          <div className="ai-orb">🤖</div>
+          <div className="ai-lbl">AI Tracker</div>
+          <div className="ai-msg">Monitoring <b>{activeCount} active</b> incidents — auto updates every 3 min</div>
+          <div className="ai-timer">Next: <b>{fmt(countdown)}</b></div>
+        </div>
+
+        <div className="toolbar">
+          <div className="tbar-l">
+            <span className="tbar-lbl">Severity</span>
+            {['high', 'medium', 'low'].map(s => (
+              <button key={s} className={`fb ${sevFilter === s ? `on-${s}` : ''}`}
+                onClick={() => setSevFilter(sevFilter === s ? '' : s)}>
+                {s}
+              </button>
+            ))}
+            <div className="tbar-sep" />
+            <span className="tbar-lbl">Status</span>
+            {STATUS_PIPELINE.map(s => (
+              <button key={s} className={`fb ${staFilter === s ? 'on-s' : ''}`}
+                onClick={() => setStaFilter(staFilter === s ? '' : s)}>
+                {STATUS_CONFIG[s].label}
+              </button>
             ))}
           </div>
+          <div className="tbar-count">{filtered.length} / {alerts.length} alerts</div>
+        </div>
 
-          <div className="cs-toolbar">
-            <div className="cs-toolbar-left">
-              <span style={{ fontSize:'11px', color:'#2d3748', letterSpacing:'2px', fontWeight:700 }}>SEV</span>
-              {['high','medium','low'].map(s => (
-                <button
-                  key={s}
-                  className={`cs-filter-btn sev-${s} ${sevFilter === s ? 'active' : ''}`}
-                  onClick={() => setSevFilter(sevFilter === s ? '' : s)}
-                >
-                  {s.toUpperCase()}
-                </button>
-              ))}
-              <div className="cs-divider" />
-              <span style={{ fontSize:'11px', color:'#2d3748', letterSpacing:'2px', fontWeight:700 }}>STATUS</span>
-              {STATUS_PIPELINE.map(s => (
-                <button
-                  key={s}
-                  className={`cs-filter-btn ${staFilter === s ? 'active' : ''}`}
-                  onClick={() => setStaFilter(staFilter === s ? '' : s)}
-                >
-                  {STATUS_CONFIG[s].label.toUpperCase()}
-                </button>
-              ))}
+        <div className="layout">
+          <div className="list-col">
+            <div className="sec-hd">
+              <span className="sec-title">Live Alert Feed</span>
+              <div className="sec-line" />
             </div>
-            <div className="cs-count">{filtered.length} / {alerts.length} alerts</div>
-          </div>
 
-          <div className="cs-section-header">
-            <span className="cs-section-title">Alert Feed</span>
-            <div className="cs-section-line" />
-          </div>
-
-          <div className="cs-list">
             {filtered.length === 0 ? (
-              <div className="cs-empty">
-                <div className="cs-empty-icon">⚠</div>
-                <div className="cs-empty-text">No alerts found</div>
+              <div className="empty-state">
+                <div className="empty-icon">🛡️</div>
+                <div className="empty-txt">All Clear — No Active Alerts</div>
               </div>
-            ) : (
-              filtered.map(alert => {
-                const sc  = SEV_CONFIG[alert.severity] || SEV_CONFIG.high;
-                const stc = STATUS_CONFIG[alert.status] || STATUS_CONFIG.PENDING;
-                return (
-                  <div
-                    key={alert._id}
-                    className={`cs-card ${alert._id === newId ? 'new-flash' : ''}`}
-                    style={{ '--sev-color': sc.border }}
-                  >
-                    <div className="cs-card-inner">
-                      <div className="cs-card-header">
-                        <div className="cs-card-title">
-                          {alert.title || `Alert by ${alert.name}`}
-                        </div>
-                        <div className="cs-badges">
-                          <span className="cs-badge" style={{ background: sc.bg, color: sc.text, borderColor: sc.border + '40' }}>
-                            {sc.label}
-                          </span>
-                          <span className="cs-badge" style={{ background: stc.bg, color: stc.text }}>
-                            {stc.icon} {stc.label}
-                          </span>
-                        </div>
+            ) : filtered.map(alert => {
+              const sc  = SEV_CONFIG[alert.severity] || SEV_CONFIG.high;
+              const stc = STATUS_CONFIG[alert.status] || STATUS_CONFIG.PENDING;
+              return (
+                <div key={alert._id}
+                  className={`card ${alert._id === newId ? 'flash' : ''}`}
+                  style={{ '--sev-c': sc.border }}
+                >
+                  <div className="card-accent" />
+                  <div className="card-body">
+                    <div className="card-top">
+                      <div className="card-title">{alert.title || `Alert by ${alert.name}`}</div>
+                      <div className="badges">
+                        <span className="badge" style={{ background: sc.bg, color: sc.text, borderColor: sc.border + '40' }}>
+                          {sc.label}
+                        </span>
+                        <span className="badge" style={{ background: stc.bg, color: stc.text }}>
+                          {stc.icon} {stc.label}
+                        </span>
                       </div>
+                    </div>
 
-                      <div className="cs-card-meta">
-                        <div className="cs-meta-item">
-                          <span style={{ color: sc.dot, fontSize:'8px' }}>●</span>
-                          {alert.name}
-                        </div>
-                        {alert.phone && (
-                          <>
-                            <div className="cs-meta-dot" />
-                            <div className="cs-meta-item">📞 {alert.phone}</div>
-                          </>
-                        )}
-                        <div className="cs-meta-dot" />
-                        <div className="cs-meta-item">
-                          {new Date(alert.createdAt).toLocaleString('en-IN', {
-                            day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'
-                          })}
-                        </div>
-                        {alert.location?.lat && (
-                          <>
-                            <div className="cs-meta-dot" />
-                            <div className="cs-meta-item" style={{ color:'#0a84ff' }}>
-                              📍 {alert.location.lat.toFixed(4)}, {alert.location.lng.toFixed(4)}
-                            </div>
-                          </>
-                        )}
+                    <div className="card-meta">
+                      <div className="mi">
+                        <span style={{ color: sc.border, fontSize: '8px' }}>●</span> {alert.name}
                       </div>
-
-                      {alert.description && (
-                        <div className="cs-desc">{alert.description}</div>
+                      {alert.phone && (
+                        <><div className="ms" /><div className="mi">📞 {alert.phone}</div></>
                       )}
-
-                      {alert.services?.length > 0 && (
-                        <div className="cs-services">
-                          {alert.services.map(s => (
-                            <span key={s} className="cs-service-tag">
-                              {SERVICES_ICONS[s] || '🔔'} {s}
-                            </span>
-                          ))}
-                        </div>
+                      <div className="ms" />
+                      <div className="mi">
+                        {new Date(alert.createdAt).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                      {alert.location?.lat && (
+                        <><div className="ms" />
+                        <div className="mi" style={{ color: '#2563eb' }}>
+                          📍 {alert.location.lat.toFixed(4)}, {alert.location.lng.toFixed(4)}
+                        </div></>
                       )}
+                    </div>
 
-                      {alert.photo && (
-                        <img src={alert.photo} alt="Incident proof" className="cs-photo" />
-                      )}
+                    {alert.description && <div className="desc">{alert.description}</div>}
 
-                      <StatusPipeline
-                        currentStatus={alert.status}
-                        alertId={alert._id}
-                        onStatusChange={changeStatus}
-                      />
+                    {alert.services?.length > 0 && (
+                      <div className="services">
+                        {alert.services.map(s => (
+                          <span key={s} className="svc">{SERVICES_ICONS[s] || '🔔'} {s}</span>
+                        ))}
+                      </div>
+                    )}
 
-                      <div className="cs-card-footer">
-                        {alert.location?.lat ? (
-                          <a
-                            href={`https://maps.google.com/?q=${alert.location.lat},${alert.location.lng}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="cs-map-link"
-                          >
-                            🗺 VIEW ON MAP
-                          </a>
-                        ) : (
-                          <span className="cs-no-loc">No location data</span>
-                        )}
-                        <select
-                          className="cs-status-sel"
-                          value={alert.status}
-                          onChange={e => changeStatus(alert._id, e.target.value)}
+                    {alert.photo && <img src={alert.photo} alt="Incident" className="inc-photo" />}
+
+                    {alert.lastAIUpdate && (
+                      <div className="ai-tag">
+                        <div className="ai-tag-dot" />
+                        🤖 AI Tracked · {new Date(alert.lastAIUpdate).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    )}
+
+                    <Pipeline status={alert.status} alertId={alert._id} onStatusChange={changeStatus} />
+
+                    <div className="card-ft">
+                      {alert.location?.lat ? (
+                        
+                          href={`https://maps.google.com/?q=${alert.location.lat},${alert.location.lng}`}
+                          target="_blank" rel="noreferrer" className="map-btn"
                         >
-                          {STATUS_PIPELINE.map(s => (
-                            <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-                          ))}
-                        </select>
-                      </div>
+                          🗺 View on Map
+                        </a>
+                      ) : <span className="no-loc">No location</span>}
 
+                      <select className="status-sel" value={alert.status}
+                        onChange={e => changeStatus(alert._id, e.target.value)}>
+                        {STATUS_PIPELINE.map(s => (
+                          <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
+                        ))}
+                      </select>
                     </div>
                   </div>
-                );
-              })
-            )}
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="right-col">
+            <div>
+              <div className="panel-hd">AI Bot Status</div>
+              <div className="ai-card">
+                <div className="ai-card-hd">
+                  <div className="ai-avatar">🤖</div>
+                  <div>
+                    <div className="ai-name">CrisisAI</div>
+                    <div className="ai-status-txt"><b>● Online</b> — Tracking {activeCount} alerts</div>
+                  </div>
+                </div>
+                <div className="ai-log-feed">
+                  {aiLogs.length === 0
+                    ? <div style={{ fontSize: '10px', color: 'var(--text-dim)', fontFamily: 'DM Mono', padding: '8px', textAlign: 'center' }}>
+                        Monitoring... waiting for events
+                      </div>
+                    : aiLogs.map(l => (
+                        <div key={l.id} className="ai-log-entry">
+                          <div className="log-dot" />
+                          <div className="log-body"><b>{l.t}</b> {l.msg}</div>
+                        </div>
+                      ))
+                  }
+                </div>
+                <div className="countdown-box">
+                  <div className="countdown-lbl">Next Auto Update</div>
+                  <div className="countdown-val">{fmt(countdown)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <div className="panel-hd">Quick Stats</div>
+              <div className="qs-list">
+                {[
+                  { lbl: 'Active Incidents', val: activeCount,                                        c: '#dc2626' },
+                  { lbl: 'Resolved Today',   val: alerts.filter(a => a.status === 'RESOLVED').length, c: '#059669' },
+                  { lbl: 'High Priority',    val: alerts.filter(a => a.severity === 'high').length,   c: '#dc2626' },
+                  { lbl: 'Avg Response',     val: '~3 min',                                           c: '#2563eb' },
+                ].map(item => (
+                  <div key={item.lbl} className="qs-row" style={{ '--qc': item.c }}>
+                    <span className="qs-lbl">{item.lbl}</span>
+                    <span className="qs-val">{item.val}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <div className="panel-hd">Activity Log</div>
+              <div className="act-list">
+                {activity.length === 0
+                  ? <div style={{ fontSize: '11px', color: 'var(--text-dim)', padding: '8px 0' }}>No recent activity</div>
+                  : activity.map(a => (
+                      <div key={a.id} className="act-row">
+                        <div className="act-dot" style={{ '--ac': a.color }} />
+                        <div>
+                          <div className="act-text">{a.text}</div>
+                          <div className="act-time">{a.t}</div>
+                        </div>
+                      </div>
+                    ))
+                }
+              </div>
+            </div>
           </div>
         </div>
 
-        {toast && (
-          <div className="cs-toast">
-            <div className="cs-toast-dot" />
-            {toast}
-          </div>
-        )}
+        <div className="toast-wrap">
+          {toasts.map(t => (
+            <div key={t.id} className={`toast ${t.type}`}>
+              <div className="toast-dot" />{t.msg}
+            </div>
+          ))}
+        </div>
       </div>
     </>
   );
