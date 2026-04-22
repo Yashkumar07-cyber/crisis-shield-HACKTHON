@@ -1,90 +1,133 @@
 const express = require('express');
 const router = express.Router();
 
-// Simple in-memory cache — same title dobara analyze na ho
+// Cache — same title dobara analyze na ho
 const cache = new Map();
 
-async function callGemini(prompt, retries = 3) {
-  for (let i = 0; i < retries; i++) {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.3, maxOutputTokens: 500 }
-        })
-      }
-    );
+// Multiple models try karo — agar ek fail ho toh doosra
+const MODELS = [
+  'gemini-1.5-flash-8b',
+  'gemini-1.5-flash',
+  'gemini-1.0-pro'
+];
 
-    if (response.status === 429) {
-      const wait = (i + 1) * 2000; // 2s, 4s, 6s
-      console.log(`Rate limited, retrying in ${wait}ms...`);
-      await new Promise(r => setTimeout(r, wait));
+async function callGemini(title) {
+  const prompt = `Emergency AI. Analyze incident and return ONLY valid JSON, no markdown.
+Incident: "${title}"
+Services available: Police, Fire Brigade, Ambulance, Disaster Relief, Electricity Dept, Coast Guard
+Rules: fire=Fire Brigade+Ambulance, accident=Police+Ambulance, flood=Disaster Relief+Ambulance, electric=Electricity Dept+Police
+Return: {"summary":"brief analysis","severity":"high|medium|low","services":["service1"],"suggested_description":"description"}`;
+
+  const apiKey = process.env.GEMINI_API_KEY;
+
+  for (const model of MODELS) {
+    try {
+      console.log(`Trying model: ${model}`);
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { temperature: 0.1, maxOutputTokens: 256 }
+          })
+        }
+      );
+
+      if (response.status === 429) {
+        console.log(`${model} rate limited, trying next...`);
+        continue; // next model try karo
+      }
+
+      if (!response.ok) {
+        const err = await response.text();
+        console.log(`${model} error ${response.status}:`, err);
+        continue;
+      }
+
+      const data = await response.json();
+      const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const cleaned = rawText.replace(/```json\n?/gi, '').replace(/```\n?/gi, '').trim();
+      const parsed = JSON.parse(cleaned);
+      console.log(`Success with model: ${model}`);
+      return parsed;
+
+    } catch (err) {
+      console.log(`${model} failed:`, err.message);
       continue;
     }
-
-    if (!response.ok) throw new Error(`Gemini error: ${response.status}`);
-
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    const cleaned = rawText.replace(/```json\n?/gi, '').replace(/```\n?/gi, '').trim();
-    return JSON.parse(cleaned);
   }
 
-  throw new Error('Rate limit exceeded, please try again later');
+  // Sab models fail — rule-based fallback
+  console.log('All models failed, using rule-based fallback');
+  return ruleBased(title);
+}
+
+// Rule-based fallback — koi API nahi chahiye
+function ruleBased(title) {
+  const t = title.toLowerCase();
+  let services = [], severity = 'medium', summary = '';
+
+  if (t.includes('fire') || t.includes('aag') || t.includes('burn')) {
+    services = ['Fire Brigade', 'Ambulance'];
+    severity = 'high';
+    summary = 'Fire incident detected. Immediate fire brigade and medical response required. Evacuate the area.';
+  } else if (t.includes('accident') || t.includes('crash') || t.includes('collision')) {
+    services = ['Police', 'Ambulance'];
+    severity = 'high';
+    summary = 'Road accident detected. Police and ambulance required immediately. Secure the area.';
+  } else if (t.includes('flood') || t.includes('water') || t.includes('baarish')) {
+    services = ['Disaster Relief', 'Ambulance'];
+    severity = 'medium';
+    summary = 'Flooding incident detected. Disaster relief and evacuation assistance needed.';
+  } else if (t.includes('electric') || t.includes('bijli') || t.includes('wire')) {
+    services = ['Electricity Dept', 'Police'];
+    severity = 'high';
+    summary = 'Electrical hazard detected. Keep distance, electricity department needed urgently.';
+  } else if (t.includes('fight') || t.includes('attack') || t.includes('crime')) {
+    services = ['Police'];
+    severity = 'high';
+    summary = 'Security incident detected. Police response required immediately.';
+  } else if (t.includes('medical') || t.includes('injury') || t.includes('hurt')) {
+    services = ['Ambulance'];
+    severity = 'medium';
+    summary = 'Medical emergency detected. Ambulance required immediately.';
+  } else {
+    services = ['Police', 'Ambulance'];
+    severity = 'medium';
+    summary = 'Emergency incident reported. Police and medical services dispatched for assessment.';
+  }
+
+  return {
+    summary,
+    severity,
+    services,
+    suggested_description: `${title}. Emergency services have been notified. Please provide more details about the situation.`
+  };
 }
 
 router.post('/analyze', async (req, res) => {
   const { title } = req.body;
   if (!title) return res.status(400).json({ success: false, error: 'Title required' });
 
-  // Cache check — same title ka result cache se do
   const cacheKey = title.toLowerCase().trim();
   if (cache.has(cacheKey)) {
-    console.log('Cache hit:', cacheKey);
     return res.json({ success: true, ...cache.get(cacheKey) });
   }
 
-  const prompt = `You are an emergency response AI. Analyze this incident title and respond ONLY with valid JSON (no markdown, no explanation).
-
-Incident: "${title}"
-
-Available services: Police, Fire Brigade, Ambulance, Disaster Relief, Electricity Dept, Coast Guard
-
-Respond with this exact JSON structure:
-{
-  "summary": "2-3 sentence analysis of the incident and immediate risks",
-  "severity": "low or medium or high",
-  "services": ["array of relevant service names from available list only"],
-  "suggested_description": "A helpful pre-filled description for the reporter to edit"
-}
-
-Rules:
-- Fire incidents: always include Fire Brigade + Ambulance
-- Accidents: Police + Ambulance
-- Flooding/natural disaster: Disaster Relief + Ambulance
-- Electric hazard: Electricity Dept + Police
-- severity high = life threatening, medium = serious, low = minor
-- Only use services from the available list`;
-
   try {
-    const parsed = await callGemini(prompt);
+    const result = await callGemini(title);
 
-    // Cache mein save karo (1 ghante ke liye)
-    cache.set(cacheKey, parsed);
+    cache.set(cacheKey, result);
     setTimeout(() => cache.delete(cacheKey), 60 * 60 * 1000);
 
-    res.json({ success: true, ...parsed });
+    res.json({ success: true, ...result });
   } catch (err) {
-    console.error('Gemini error:', err.message);
-
-    if (err.message.includes('Rate limit')) {
-      return res.status(429).json({ success: false, error: 'Too many requests, please wait a moment' });
-    }
-
-    res.status(500).json({ success: false, error: 'AI analysis failed' });
+    console.error('Fatal error:', err.message);
+    // Even on fatal error — rule based return karo
+    const fallback = ruleBased(title);
+    res.json({ success: true, ...fallback });
   }
 });
 
