@@ -9,8 +9,9 @@ const app = express();
 app.use(cors({
   origin: [
     'https://crisis-admin.netlify.app',
-    'https://crisis-shield-07.netlify.app',   // ← ADDED
+    'https://crisis-shield-07.netlify.app',
     'https://crisis-shield-hackthon.onrender.com',
+    'https://crisis-shield-admin06.netlify.app',
     'http://localhost:3000',
     'http://localhost:5500',
     'http://127.0.0.1:5500',
