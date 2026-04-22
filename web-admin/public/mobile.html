@@ -471,7 +471,7 @@ function onTitleInput(val) {
   if (trimmed === lastAnalyzedTitle) return;
   showAIThinking();
   clearTimeout(analyzeTimer);
-  analyzeTimer = setTimeout(() => analyzeWithGemini(trimmed), 1500);
+  analyzeTimer = setTimeout(() => analyzeWithGemini(trimmed), 3000);
 }
 
 function showAIThinking() {
