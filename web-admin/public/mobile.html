@@ -373,9 +373,8 @@ input::placeholder,textarea::placeholder{color:var(--muted);}
 
 <script>
 // ── CONFIG ──
-const GEMINI_API_KEY = 'AIzaSyAkugGZeTOHKXN1ADMex_Ye_ofIHXTb8Z0';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
 const SERVER = 'https://crisis-shield-hackthon.onrender.com';
+const AI_URL = `${SERVER}/api/ai/analyze`;
 
 let coords = null;
 let severity = 'medium';
@@ -487,66 +486,25 @@ function showAIThinking() {
   pill.textContent = 'Thinking...';
 }
 
-// ── GEMINI API CALL ──
+// AI ANALYZE via Backend
 async function analyzeWithGemini(title) {
-  const prompt = `You are an emergency response AI. Analyze this incident title and respond ONLY with valid JSON (no markdown, no explanation).
-
-Incident: "${title}"
-
-Available services: Police, Fire Brigade, Ambulance, Disaster Relief, Electricity Dept, Coast Guard
-
-Respond with this exact JSON structure:
-{
-  "summary": "2-3 sentence analysis of the incident and immediate risks",
-  "severity": "low" or "medium" or "high",
-  "services": ["array of relevant service names from available list only"],
-  "suggested_description": "A helpful pre-filled description for the reporter to edit"
-}
-
-Rules:
-- Fire incidents: always include Fire Brigade + Ambulance
-- Accidents: Police + Ambulance
-- Flooding/natural disaster: Disaster Relief + Ambulance
-- Electric hazard: Electricity Dept + Police
-- severity high = life threatening, medium = serious but stable, low = minor
-- Only use services from the available list`;
-
   try {
-    const res = await fetch(GEMINI_URL, {
+    const res = await fetch(AI_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 500
-        }
-      })
+      body: JSON.stringify({ title })
     });
-
-    if (!res.ok) throw new Error(`Gemini error: ${res.status}`);
-
+    if (!res.ok) throw new Error('Server error');
     const data = await res.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    // Clean up response — remove markdown fences if any
-    const cleaned = rawText.replace(/```json\n?/gi, '').replace(/```\n?/gi, '').trim();
-    const parsed = JSON.parse(cleaned);
-
-    aiSuggestion = parsed;
+    if (!data.success) throw new Error('AI failed');
+    aiSuggestion = data;
     lastAnalyzedTitle = title;
-    showAIResult(parsed);
-
+    showAIResult(data);
   } catch (err) {
-    console.error('Gemini error:', err);
-    const pill = document.getElementById('ai-status-pill');
-    const thinking = document.getElementById('ai-thinking');
-    pill.className = 'ai-status-pill err';
-    pill.textContent = 'Error';
-    thinking.style.display = 'none';
-    // Show retry hint
-    const result = document.getElementById('ai-result');
-    result.style.display = 'none';
+    console.error('AI error:', err);
+    document.getElementById('ai-status-pill').className = 'ai-status-pill err';
+    document.getElementById('ai-status-pill').textContent = 'Error';
+    document.getElementById('ai-thinking').style.display = 'none';
   }
 }
 
